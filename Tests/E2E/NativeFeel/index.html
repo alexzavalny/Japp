@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Native Feel</title>
+  <!-- Fixed positions: Scripts/e2e-test.sh right-clicks and hit-tests these points. -->
+  <style>
+    body { margin: 0; }
+    main { position: fixed; inset: 0 0 0 200px; background: Canvas; }
+    header { position: absolute; left: 0; right: 0; top: 0; height: 52px; }
+    #button { position: absolute; left: 100px; top: 12px; width: 80px; height: 28px; }
+    #para { position: absolute; left: 20px; top: 90px; width: 300px; height: 20px; margin: 0; }
+    #field { position: absolute; left: 20px; top: 130px; width: 200px; height: 24px; }
+    #link { position: absolute; left: 20px; top: 180px; }
+    #image { position: absolute; left: 20px; top: 220px; width: 32px; height: 32px; }
+    #selectable { position: absolute; left: 20px; top: 270px; margin: 0; }
+  </style>
+</head>
+<body>
+  <main>
+    <header data-japp-drag-region><button id="button">Button</button></header>
+    <p id="para">A label: not selectable, no context menu.</p>
+    <input id="field" value="editable text">
+    <a id="link" href="https://example.com/">A web link</a>
+    <img id="image" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'/%3E">
+    <p id="selectable" data-selectable>Selectable text</p>
+  </main>
+</body>
+</html>

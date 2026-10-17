@@ -1,0 +1,22 @@
+{
+  "manifestVersion": 1,
+  "id": "com.example.calculator",
+  "name": "Calculator",
+  "version": "1.0.0",
+  "description": "A simple calculator. The reference JApp: plain HTML, CSS and JavaScript.",
+  "author": "JApp Examples",
+  "entry": "index.html",
+  "icon": "assets/icon.png",
+  "window": {
+    "width": 400,
+    "height": 550,
+    "minWidth": 300,
+    "minHeight": 400,
+    "resizable": true,
+    "titleBarStyle": "hidden",
+    "backgroundColor": "#1C1C1E"
+  },
+  "permissions": [
+    "storage"
+  ]
+}

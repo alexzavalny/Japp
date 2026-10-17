@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chess Results</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <div class="sidebar-column">
+      <div class="sidebar-titlebar" data-japp-drag-region></div>
+      <nav class="sidebar" id="sidebar" aria-label="Sections"></nav>
+    </div>
+    <main class="main">
+      <header class="toolbar" data-japp-drag-region>
+        <div class="nav-buttons">
+          <button type="button" class="icon-button" id="back" title="Back (⌘[)" aria-label="Back"></button>
+          <button type="button" class="icon-button" id="forward" title="Forward (⌘])" aria-label="Forward"></button>
+        </div>
+        <div class="titles">
+          <h1 id="title"></h1>
+          <p id="subtitle"></p>
+        </div>
+        <div class="actions" id="actions"></div>
+      </header>
+      <section class="content" id="content" tabindex="-1"></section>
+    </main>
+  </div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

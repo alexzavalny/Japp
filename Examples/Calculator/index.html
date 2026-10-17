@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calculator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="calculator" aria-label="Calculator">
+    <header class="toolbar">
+      <button class="icon-button" id="history-toggle" type="button" title="History (H)" aria-label="Show history" aria-expanded="false" aria-controls="history">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </header>
+
+    <section class="display" aria-live="polite">
+      <div class="expression" id="expression"></div>
+      <output class="result" id="result">0</output>
+    </section>
+
+    <section class="keypad" id="keypad">
+      <button class="key function" type="button" data-action="clear" id="clear">AC</button>
+      <button class="key function" type="button" data-action="negate" aria-label="Plus minus">±</button>
+      <button class="key function" type="button" data-action="percent" aria-label="Percent">%</button>
+      <button class="key operator" type="button" data-operator="÷" aria-label="Divide">÷</button>
+
+      <button class="key digit" type="button" data-digit="7">7</button>
+      <button class="key digit" type="button" data-digit="8">8</button>
+      <button class="key digit" type="button" data-digit="9">9</button>
+      <button class="key operator" type="button" data-operator="×" aria-label="Multiply">×</button>
+
+      <button class="key digit" type="button" data-digit="4">4</button>
+      <button class="key digit" type="button" data-digit="5">5</button>
+      <button class="key digit" type="button" data-digit="6">6</button>
+      <button class="key operator" type="button" data-operator="−" aria-label="Subtract">−</button>
+
+      <button class="key digit" type="button" data-digit="1">1</button>
+      <button class="key digit" type="button" data-digit="2">2</button>
+      <button class="key digit" type="button" data-digit="3">3</button>
+      <button class="key operator" type="button" data-operator="+" aria-label="Add">+</button>
+
+      <button class="key digit" type="button" data-action="backspace" aria-label="Delete">⌫</button>
+      <button class="key digit" type="button" data-digit="0">0</button>
+      <button class="key digit" type="button" data-action="decimal" aria-label="Decimal point">.</button>
+      <button class="key equals" type="button" data-action="equals" aria-label="Equals">=</button>
+    </section>
+
+    <aside class="history" id="history" aria-label="History">
+      <header>
+        <h2>History</h2>
+        <button type="button" id="history-clear">Clear</button>
+      </header>
+      <ol id="history-list"></ol>
+      <p class="history-empty" id="history-empty">No calculations yet.</p>
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

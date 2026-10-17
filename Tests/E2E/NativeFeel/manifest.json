@@ -1,0 +1,7 @@
+{
+  "manifestVersion": 1,
+  "id": "dev.japp.e2e.native-feel",
+  "name": "Native Feel",
+  "version": "1.0.0",
+  "window": { "width": 640, "height": 420, "resizable": false, "titleBarStyle": "hiddenInset", "material": "sidebar" }
+}
