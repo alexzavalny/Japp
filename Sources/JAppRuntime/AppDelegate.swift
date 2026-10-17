@@ -15,7 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     private var terminationSource: DispatchSourceSignal?
 
     private var isBundled: Bool { Bundle.main.bundleURL.pathExtension == "app" && Bundle.main.bundleIdentifier != nil }
-    private static let jappType = UTType(JAppVersion.uniformTypeIdentifier) ?? UTType(filenameExtension: JAppVersion.fileExtension) ?? .data
+    static let jappType = UTType(JAppVersion.uniformTypeIdentifier) ?? UTType(filenameExtension: JAppVersion.fileExtension) ?? .data
 
     // MARK: Launch
 
@@ -39,6 +39,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             distributed.addObserver(self, selector: #selector(automationRequest(_:)), name: Automation.editorActionNotification,
                                     object: nil, suspensionBehavior: .deliverImmediately)
         }
+        if ProcessIdentity.startsHidden {
+            // A safety net for windows not covered by an explicit becomeRegularApp().
+            NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { _ in
+                MainActor.assumeIsolated { ProcessIdentity.becomeRegularApp() }
+            }
+        }
     }
 
     @objc private func automationRequest(_ notification: Notification) {
@@ -47,6 +53,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        let defaultLaunch = notification.userInfo?[NSApplication.launchIsDefaultUserInfoKey] as? Bool ?? false
+        if ProcessIdentity.isAppBundle && arguments.hostURLs.isEmpty && arguments.editURLs.isEmpty {
+            // Started from the Dock, Spotlight or Finder rather than by JApp Runtime.
+            hasOpenedSomething = true
+            manager.openOwnApp()
+        } else if defaultLaunch && arguments.hostURLs.isEmpty && arguments.editURLs.isEmpty {
+            ProcessIdentity.becomeRegularApp()  // JApp Runtime itself was opened: it will greet the user
+        }
         for url in arguments.hostURLs {
             hasOpenedSomething = true
             manager.open(url)
@@ -75,7 +89,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if !flag && manager.sessions.isEmpty { showWelcome() }
+        if !flag && manager.sessions.isEmpty {
+            if ProcessIdentity.isAppBundle { manager.openOwnApp() } else { showWelcome() }
+        }
         return true
     }
 
@@ -91,6 +107,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     private func showWelcome() {
+        ProcessIdentity.becomeRegularApp()
         if welcome == nil { welcome = WelcomeWindowController() }
         welcome?.showWindow(nil)
         NSApp.activate()
@@ -98,7 +115,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     func refreshMenus() {
-        menu.setAppName(manager.keySession?.manifest.name ?? "JApp Runtime")
+        menu.setAppName(manager.keySession?.manifest.name ?? ProcessIdentity.appBundle?.name ?? "JApp Runtime")
         menu.setDevelopMenuVisible(manager.keySession?.isDeveloperMode ?? false)
     }
 
@@ -196,7 +213,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         NSApp.orderFrontStandardAboutPanel(options: [
             .applicationName: "JApp Runtime",
             .applicationVersion: JAppVersion.runtime,
-            .applicationIcon: NSImage(named: NSImage.applicationIconName) ?? IconManager.genericIcon,
+            .applicationIcon: ProcessIdentity.runtimeIcon ?? NSImage(named: NSImage.applicationIconName) ?? IconManager.genericIcon,
             .credits: NSAttributedString(string: "Runs .japp applications: single-file HTML, CSS and JavaScript apps you can open, edit and share like documents.",
                                          attributes: [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.labelColor]),
         ])
@@ -204,13 +221,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     @objc func showHelp(_ sender: Any?) {
-        if let docs = Bundle.main.url(forResource: "CREATING_APPS", withExtension: "md", subdirectory: "Docs") {
+        if let docs = ProcessIdentity.runtimeResource("CREATING_APPS", "md", subdirectory: "Docs") {
             NSWorkspace.shared.open(docs)
         }
     }
 
     @objc func openExample(_ sender: Any?) {
-        guard let bundled = Bundle.main.url(forResource: "Calculator", withExtension: "japp", subdirectory: "Examples") else { return }
+        guard let bundled = ProcessIdentity.runtimeResource("Calculator", "japp", subdirectory: "Examples") else { return }
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("JApp Examples", isDirectory: true)
         let target = documents.appendingPathComponent("Calculator.japp")
@@ -229,8 +246,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     @objc func installCommandLineTool(_ sender: Any?) {
-        let tool = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/japp")
-        guard FileManager.default.isExecutableFile(atPath: tool.path) else { return }
+        guard let tool = ProcessIdentity.runtimeBundle?.bundleURL.appendingPathComponent("Contents/Helpers/japp"),
+              FileManager.default.isExecutableFile(atPath: tool.path) else { return }
         let link = URL(fileURLWithPath: "/usr/local/bin/japp")
         let alert = NSAlert()
         do {

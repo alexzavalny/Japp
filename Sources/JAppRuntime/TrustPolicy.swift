@@ -20,7 +20,7 @@ enum TrustPolicy {
     static func allowsLaunch(of package: JAppPackage) -> Bool {
         guard package.kind == .archive, isQuarantined(package.url) else { return true }
         let digest = package.archiveDigest ?? ""
-        var trusted = UserDefaults.standard.stringArray(forKey: trustedKey) ?? []
+        var trusted = RuntimeSettings.store.stringArray(forKey: trustedKey) ?? []
         if trusted.contains(digest) { return true }
         if RuntimeSettings.isAutomating {
             Automation.reportFailure(url: package.url, error: JAppError.io("The app is quarantined (downloaded from the internet) and needs confirmation."))
@@ -41,13 +41,14 @@ enum TrustPolicy {
         alert.addButton(withTitle: "Cancel")
         alert.addButton(withTitle: "Open")
         alert.addButton(withTitle: "Show Source…")
+        ProcessIdentity.becomeRegularApp()
         NSApp.activate()
 
         switch alert.runModal() {
         case .alertSecondButtonReturn:
             if removexattr(package.url.path, quarantineAttribute, 0) != 0 {
                 trusted.append(digest)
-                UserDefaults.standard.set(Array(trusted.suffix(500)), forKey: trustedKey)
+                RuntimeSettings.store.set(Array(trusted.suffix(500)), forKey: trustedKey)
             }
             return true
         case .alertThirdButtonReturn:

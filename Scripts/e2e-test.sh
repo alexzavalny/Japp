@@ -11,7 +11,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="${JAPP_APP:-/Applications/JApp Runtime.app}"
 [ -d "$APP" ] || APP="$HOME/Applications/JApp Runtime.app"
 JAPP="$APP/Contents/Helpers/japp"
-WORK="$(mktemp -d -t japp-e2e)"
+WORK="$(cd "$(mktemp -d -t japp-e2e)" && pwd -P)"   # /private/var/…: the path processes report
 export JAPP_SUPPORT_DIR="$WORK/support"
 export JAPP_RUNTIME="$APP"
 PY="/usr/bin/python3 -I"
@@ -29,9 +29,14 @@ if pgrep -x JAppRuntime >/dev/null; then
     echo "Quit running JApp apps first: Launch Services would route test requests to them."
     exit 1
 fi
+LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 cleanup() {
     # Never leave the runtime in automation mode.
     defaults delete dev.japp.runtime JAppAutomationDir 2>/dev/null
+    # Test app bundles must not linger in Launch Services next to the real ones.
+    for bundle in "$JAPP_SUPPORT_DIR"/AppBundles/*/*.app; do
+        [ -d "$bundle" ] && "$LSREGISTER" -u "$bundle" >/dev/null 2>&1
+    done
 }
 trap cleanup EXIT
 echo "Runtime: $APP"
@@ -64,6 +69,59 @@ else
 fi
 sleep 1
 xattr -p com.apple.ResourceFork "$WORK/Opened.japp" >/dev/null 2>&1 && pass "Finder icon applied on launch" || fail "Finder icon applied on launch"
+
+echo "==> App bundles (the app's own name in the menu bar, Dock and ⌘-Tab)"
+bundle_open() {  # bundle_open <file> <report dir>: what a Finder double-click does, through the app bundle
+    mkdir -p "$2"
+    open --env "JAPP_SUPPORT_DIR=$JAPP_SUPPORT_DIR" -a "$APP" "$1" --args -JAppAutomationDir "$2" \
+        -JAppAutomationQuit YES -JAppAutomationAppBundles YES -JAppSetFinderIcons NO
+    wait_for "$2/report.json"
+}
+cp "$WORK/Calculator.japp" "$WORK/Bundled.japp"
+BUNDLE="$JAPP_SUPPORT_DIR/AppBundles/com.example.calculator/Calculator.app"
+if bundle_open "$WORK/Bundled.japp" "$WORK/bundle1"; then
+    B="$WORK/bundle1/report.json"
+    check "the app runs in its own app bundle" "$(json "$B" "(d['identity']['appBundle'], d['identity']['bundlePath'])")" "(True, '$BUNDLE')"
+    check "process identity is the app's" "$(json "$B" "(d['identity']['localizedName'], d['identity']['bundleName'], d['identity']['executable'])")" "('Calculator', 'Calculator', 'Calculator')"
+    check "bundle id is namespaced" "$(json "$B" "d['identity']['bundleIdentifier']")" "dev.japp.app.com.example.calculator"
+    check "app menu names the app only" "$(json "$B" "d['native']['menuBar'][0]['title'], [i for i in d['native']['menuBar'][0]['items'] if 'JApp' in i or 'Command-Line' in i or 'Calculator' in i]")" "('Calculator', ['About Calculator', 'Hide Calculator', 'Quit Calculator'])"
+    check "no runtime commands in the File menu" "$(json "$B" "[i for m in d['native']['menuBar'] if m['title'] == 'File' for i in m['items'] if i in ('Open…', 'Edit Source…')]")" "['Edit Source…']"
+    check "the app still works" "$(json "$B" "(d['ok'], d['windowTitle'])")" "(True, 'Calculator')"
+else
+    fail "the app runs in its own app bundle" "no report"
+fi
+sleep 1
+pgrep -x JAppRuntime >/dev/null && fail "JApp Runtime quits after handing the app over" || pass "JApp Runtime quits after handing the app over"
+codesign --verify --strict "$BUNDLE" 2>/dev/null && pass "app bundle is signed (ad hoc)" || fail "app bundle is signed (ad hoc)"
+check "app bundle declares no document types, URL schemes or services" \
+    "$(plutil -convert json -o - "$BUNDLE/Contents/Info.plist" | $PY -c "import json,sys; d=json.load(sys.stdin); print([k for k in ('CFBundleDocumentTypes','CFBundleURLTypes','NSServices','UTExportedTypeDeclarations') if k in d])")" "[]"
+check "app bundle has the app's icon" "$(/usr/bin/file -b "$BUNDLE/Contents/Resources/AppIcon.icns" | cut -d' ' -f1-4)" "Mac OS X icon,"
+"$JAPP" bundles | grep -q "runs:   .*/$(basename "$WORK")/Bundled.japp" && pass "japp bundles lists it with its file" || fail "japp bundles lists it with its file"
+
+# Opened on its own (Dock, Spotlight): the bundle runs the file it last ran.
+mkdir -p "$WORK/bundle2"
+open -n --env "JAPP_SUPPORT_DIR=$JAPP_SUPPORT_DIR" "$BUNDLE" --args -JAppAutomationDir "$WORK/bundle2" -JAppAutomationQuit YES -JAppSetFinderIcons NO
+if wait_for "$WORK/bundle2/report.json"; then
+    check "launching the bundle itself opens its app" "$(json "$WORK/bundle2/report.json" "(d['ok'], d['identity']['bundleIdentifier'])")" "(True, 'dev.japp.app.com.example.calculator')"
+else
+    fail "launching the bundle itself opens its app" "no report"
+fi
+
+# A renamed app gets a renamed bundle (same folder, so a Dock item keeps working).
+SOURCE="$("$JAPP" edit "$WORK/Bundled.japp" --no-window | sed -n 's/^Source folder: //p')"
+INODE="$(stat -f %i "$BUNDLE")"
+sed -i '' 's/"name": "Calculator"/"name": "Calculator Plus"/' "$SOURCE/manifest.json"
+"$JAPP" save "$WORK/Bundled.japp" --close >/dev/null 2>&1
+sleep 1
+if bundle_open "$WORK/Bundled.japp" "$WORK/bundle3"; then
+    check "renamed app: renamed bundle and process" "$(json "$WORK/bundle3/report.json" "(d['identity']['localizedName'], d['identity']['bundlePath'].split('/')[-1])")" "('Calculator Plus', 'Calculator Plus.app')"
+    check "renamed in place" "$(stat -f %i "$JAPP_SUPPORT_DIR/AppBundles/com.example.calculator/Calculator Plus.app" 2>/dev/null) $([ -e "$BUNDLE" ] && echo old-left)" "$INODE "
+else
+    fail "renamed app: renamed bundle and process" "no report"
+fi
+sleep 1
+"$JAPP" bundles remove com.example.calculator >/dev/null 2>&1 && [ ! -e "$JAPP_SUPPORT_DIR/AppBundles/com.example.calculator" ] \
+    && pass "japp bundles remove" || fail "japp bundles remove"
 
 echo "==> Running Calculator"
 "$JAPP" snapshot "$WORK/Calculator.japp" --output "$WORK/calculator.png" --script "$ROOT/Tests/E2E/calculator.test.js" > "$WORK/run1.json" 2>/dev/null

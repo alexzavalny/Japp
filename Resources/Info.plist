@@ -30,6 +30,10 @@
 	<true/>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<!-- No Dock tile at launch: opening a .japp only hands it to the app's own
+	     bundle. The runtime becomes a regular app when it shows a window itself. -->
+	<key>LSUIElement</key>
+	<true/>
 	<key>NSSupportsAutomaticTermination</key>
 	<false/>
 	<key>NSSupportsSuddenTermination</key>

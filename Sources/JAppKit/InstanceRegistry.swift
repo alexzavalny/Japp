@@ -37,9 +37,10 @@ public enum InstanceRegistry {
         return nil
     }
 
+    /// JApp Runtime or an app bundle (`AppBundle`) — anything else reused the pid.
     private static func isRuntime(_ pid: pid_t) -> Bool {
-        guard let app = NSRunningApplication(processIdentifier: pid), !app.isTerminated else { return false }
-        return app.bundleIdentifier == JAppVersion.runtimeBundleIdentifier
+        guard let app = NSRunningApplication(processIdentifier: pid), !app.isTerminated, let id = app.bundleIdentifier else { return false }
+        return id == JAppVersion.runtimeBundleIdentifier || id.hasPrefix(AppBundle.identifierPrefix)
     }
 }
 

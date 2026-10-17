@@ -98,6 +98,7 @@ enum Automation {
                 try? await Task.sleep(nanoseconds: 300_000_000)  // let the page repaint
             }
             report["native"] = nativeReport(for: session)
+            report["identity"] = identityReport()
             let menuPoints = RuntimeSettings.automationContextMenuPoints
             if !menuPoints.isEmpty {
                 report["contextMenus"] = await contextMenus(at: menuPoints, in: session)
@@ -116,9 +117,31 @@ enum Automation {
                 }
             }
             writePNG(NSApp.applicationIconImage, to: directory.appendingPathComponent("dock-icon.png"))
+            // How Finder, ⌘-Tab and notifications draw this process's bundle.
+            writePNG(NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath), to: directory.appendingPathComponent("bundle-icon.png"))
             write(report, to: directory)
             if RuntimeSettings.automationQuits { NSApp.terminate(nil) }
         }
+    }
+
+    /// Which bundle this process runs as: the name macOS shows in the menu bar, Dock and ⌘-Tab.
+    private static func identityReport() -> [String: Any] {
+        let policy: String
+        switch NSApp.activationPolicy() {
+        case .regular: policy = "regular"
+        case .accessory: policy = "accessory"
+        default: policy = "prohibited"
+        }
+        return [
+            "appBundle": ProcessIdentity.isAppBundle,
+            "bundleIdentifier": Bundle.main.bundleIdentifier ?? "",
+            "bundlePath": Bundle.main.bundlePath,
+            "bundleName": Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "",
+            "localizedName": NSRunningApplication.current.localizedName ?? "",
+            "executable": Bundle.main.executableURL?.lastPathComponent ?? "",
+            "runtimeBundle": ProcessIdentity.runtimeBundle?.bundlePath ?? "",
+            "activationPolicy": policy,
+        ]
     }
 
     /// What the native-feel layer is doing: developer mode, title bar metrics, drag regions, menus.

@@ -12,19 +12,21 @@ APP="$BUILD_DIR/JApp Runtime.app"
 VERSION="$(sed -n 's/.*static let runtime = "\(.*\)".*/\1/p' "$ROOT/Sources/JAppKit/JAppVersion.swift")"
 
 echo "==> Compiling ($CONFIG)"
+swift build -c "$CONFIG" --package-path "$ROOT" --product JAppRuntimeCore
 swift build -c "$CONFIG" --package-path "$ROOT" --product JAppRuntime
 swift build -c "$CONFIG" --package-path "$ROOT" --product japp
 BIN="$(swift build -c "$CONFIG" --package-path "$ROOT" --show-bin-path)"
 
 echo "==> Assembling $APP"
 rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Helpers" "$APP/Contents/Resources/Examples" "$APP/Contents/Resources/Docs"
-cp "$BIN/JAppRuntime" "$APP/Contents/MacOS/JAppRuntime"
+mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Frameworks" "$APP/Contents/Helpers" "$APP/Contents/Resources/Examples" "$APP/Contents/Resources/Docs"
+cp "$BIN/JAppRuntime" "$APP/Contents/MacOS/JAppRuntime"                      # the launcher (main.c)
+cp "$BIN/libJAppRuntimeCore.dylib" "$APP/Contents/Frameworks/"                # the runtime itself
 cp "$BIN/japp" "$APP/Contents/Helpers/japp"
 sed -e "s/__VERSION__/$VERSION/g" -e "s/__BUILD__/$(date +%Y%m%d%H%M)/g" "$ROOT/Resources/Info.plist" > "$APP/Contents/Info.plist"
 plutil -lint "$APP/Contents/Info.plist" >/dev/null
 printf 'APPL????' > "$APP/Contents/PkgInfo"
-cp "$ROOT/Resources/AppIcon.icns" "$ROOT/Resources/JAppDocument.icns" "$APP/Contents/Resources/"
+cp "$ROOT/Resources/AppIcon.icns" "$ROOT/Resources/JAppDocument.icns" "$ROOT/Resources/JAppRuntime.entitlements" "$APP/Contents/Resources/"
 cp "$ROOT/Docs/"*.md "$APP/Contents/Resources/Docs/" 2>/dev/null || true
 
 echo "==> Packing examples"
@@ -37,7 +39,8 @@ done
 echo "==> Signing (ad hoc)"
 xattr -cr "$APP"   # codesign rejects extended attributes (e.g. Finder info) inside a bundle
 codesign --force --options runtime --sign - "$APP/Contents/Helpers/japp"
-codesign --force --options runtime --sign - "$APP"
+codesign --force --options runtime --sign - "$APP/Contents/Frameworks/libJAppRuntimeCore.dylib"
+codesign --force --options runtime --entitlements "$ROOT/Resources/JAppRuntime.entitlements" --sign - "$APP"
 codesign --verify --strict "$APP"
 
 echo "==> Built $APP ($VERSION)"

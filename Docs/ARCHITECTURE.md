@@ -1,6 +1,6 @@
 # Architecture
 
-JApp has three parts, all in one Swift package with no third-party dependencies:
+JApp has four parts, all in one Swift package with no third-party dependencies:
 
 ```
 Sources/
@@ -12,11 +12,14 @@ Sources/
 │   ├── Packager.swift    folder → .japp, safe extraction, atomic writes
 │   ├── KeyValueStore     japp.storage persistence (JSON file + flock)
 │   ├── SourceWorkspace   Edit Source: unpack, track changes, validate, repack, back up
+│   ├── AppBundle, ICNS   per-app bundles: generate, sign, update in place, launch record
 │   ├── FinderIcon        custom Finder icons
-│   └── InstanceRegistry  which runtime process hosts which app
-├── JAppRuntime/    the macOS app "JApp Runtime" (AppKit + WebKit)
+│   └── InstanceRegistry  which process hosts which app
+├── JAppLauncher/   main.c: the main executable of JApp Runtime.app and of every app bundle
+├── JAppRuntime/    JAppRuntimeCore.dylib: the runtime itself (AppKit + WebKit)
+│   ├── RuntimeMain, ProcessIdentity   entry point; JApp Runtime vs. an app's bundle
 │   ├── AppDelegate, MainMenu, WelcomeWindowController
-│   ├── ApplicationManager   hosting policy (process per app), open/reload/edit routing
+│   ├── ApplicationManager   hosting policy (app bundles), open/reload/edit routing
 │   ├── AppSession           one running app: window + WKWebView + bridge + storage
 │   ├── WindowManager, WebViewFactory
 │   ├── AppWebView, NativeFeel  native behaviour: drag regions, context menus, default CSS
@@ -27,10 +30,11 @@ Sources/
 └── japp/           the command-line tool
 ```
 
-`Scripts/build.sh` compiles the two executables with SwiftPM and assembles
-`build/JApp Runtime.app` (runtime in `Contents/MacOS`, CLI in `Contents/Helpers`,
-`Info.plist` from `Resources/`, ad-hoc signature). No Xcode project is needed;
-the Swift toolchain from Xcode or the Command Line Tools is enough.
+`Scripts/build.sh` builds the library and the two executables with SwiftPM and
+assembles `build/JApp Runtime.app` (launcher in `Contents/MacOS`, runtime library in
+`Contents/Frameworks`, CLI in `Contents/Helpers`, `Info.plist` from `Resources/`,
+ad-hoc signature with the hardened runtime). No Xcode project is needed; the
+Swift toolchain from Xcode or the Command Line Tools is enough.
 
 ## Key decisions
 
@@ -75,51 +79,103 @@ Temporary extraction was considered (simpler `loadFileURL` with
 writable by anything, and gives `file://` semantics, under which modules and
 `fetch` behave differently.
 
-### 3. One process per app (by default)
+### 3. One process per app, each in a bundle of its own
 
-macOS gives one Dock tile, one menu-bar app name and one ⌘Q per *process*. If
-every app ran inside one runtime process, they would share a Dock icon and
-quitting one would quit all. So:
+macOS gives one Dock tile, one menu-bar app name and one ⌘Q per *process*, and
+takes the name it shows — in bold in the menu bar, under the Dock tile, in ⌘-Tab,
+in notifications, in Activity Monitor — from the *bundle* the process was started
+from. One bundle has one identity, and there is no public API to change it at run
+time. So every app runs in a process of its own, started from a bundle of its own:
 
-* the first app opened in a runtime process runs there;
-* opening another app makes the runtime start a **new instance of itself**
-  (`NSWorkspace.OpenConfiguration.createsNewApplicationInstance`, `--host <path>`);
-* opening an app that already runs anywhere activates that process. A tiny
-  registry (`~/Library/Application Support/JApp/Instances/<pid>.json`) maps
-  processes to apps; requests between processes (activate, reload) use
-  `DistributedNotificationCenter`.
+```
+~/Library/Application Support/JApp/AppBundles/<app-id>/
+  Chess Results.app/Contents/Info.plist                name, version, icon, dev.japp.app.<app-id>
+  Chess Results.app/Contents/MacOS/Chess Results       a copy of JApp Runtime's launcher (53 KB)
+  Chess Results.app/Contents/Resources/AppIcon.icns    made from the manifest icon
+  launch.json                                          the .japp it last ran (path + bookmark)
+```
 
-The result: every app has its own Dock tile showing its own icon, its own ⌘Q,
-its own entry in ⌘-Tab, and a crash in one app cannot take down another. Each
-app additionally gets its own WebKit data store and web content process.
+**The launcher.** `Sources/JAppLauncher/main.c` is the main executable of JApp
+Runtime.app and, copied, of every app bundle. It finds `JAppRuntimeCore.dylib`
+(next to itself in JApp Runtime.app; through `JAppRuntimePath` in an app bundle's
+Info.plist; or through Launch Services if JApp Runtime moved), loads it and calls
+`JAppRuntimeMain`. So an app bundle contains no runtime code and no app code: it
+is only an identity. Runtime updates apply to every app at once, and a bundle
+takes about 0.5 MB, almost all of it the icon.
 
-`AppSession` is self-contained, so one process can also host several apps
-(`defaults write dev.japp.runtime JAppSingleProcess -bool YES`); the Dock tile
-then follows the frontmost app. That mode is also used when the runtime runs
-outside an `.app` bundle (development) and for automation.
+**Opening a `.japp`** (double-click, `open`, `japp run`):
+
+1. Launch Services starts JApp Runtime, the handler of `.japp` files. Its
+   Info.plist declares `LSUIElement`, so it starts with no Dock tile or menu bar.
+2. It validates the file and, for a downloaded file, asks for confirmation (§ Security).
+3. `AppBundle.prepare` reuses the app's bundle, or builds it if anything it was
+   made from changed: name, version, icon digest, launcher digest, runtime
+   location, bundle format. Building happens in a staging folder; the bundle is
+   ad-hoc signed with `/usr/bin/codesign` (same hardened runtime and entitlements
+   as JApp Runtime.app); then an existing bundle keeps its folder — renamed if the
+   app was renamed — and only has its `Contents` swapped, so a Dock item that
+   points at it keeps working. A bundle whose app is running is never touched; it
+   is updated on the next launch.
+4. It records the file in `launch.json`, starts the bundle with
+   `--host <path>` (`NSWorkspace.openApplication`, yielding activation to it) and
+   quits, having shown nothing.
+
+If any of this fails, the runtime runs the app itself (§4 lists what is then
+shared). Measured on Apple silicon: ~0.6 s from `open` to the app's own process,
+including building and signing the bundle the first time.
+
+**An app bundle** runs exactly one app: the one it was started with, or — when
+started on its own from the Dock, Spotlight or Finder — the file in
+`launch.json` (found again through its bookmark if it moved; otherwise the app
+asks the user to locate it). A file with a different app id (or one whose id was
+edited) is handed back to JApp Runtime with `NSWorkspace.open(_:withApplicationAt:)`.
+Its menus leave out the runtime's own commands (About JApp Runtime, Install
+Command-Line Tool, Open…, the Help item).
+
+**Already running?** A tiny registry (`~/Library/Application Support/JApp/Instances/<pid>.json`)
+maps processes to the files they host; opening a file that is running anywhere
+activates that process instead, and requests between processes (activate, reload
+after Save & Run) use `DistributedNotificationCenter`. Two *files* with the same
+app id run as two instances of the same bundle.
+
+**Without app bundles** (`defaults write dev.japp.runtime JAppAppBundles -bool NO`),
+the first app runs in the JApp Runtime process and each further app in a new
+runtime instance (`createsNewApplicationInstance`, `--host <path>`): still one
+process, Dock tile and ⌘Q per app, but with the runtime's name. `AppSession` is
+self-contained, so one process can also host several apps (`JAppSingleProcess`);
+the Dock tile then follows the frontmost app. That mode is also used by
+`japp run --console` (the console goes to the terminal), by `japp snapshot` and
+the tests, and when the runtime runs from a build folder instead of an `.app`.
 
 ### 4. App identity: what is and is not per app
 
 | | Per app? | How |
 |---|---|---|
-| Window title, size, background | yes | manifest |
-| Dock tile and its icon | yes | separate process + `NSApp.applicationIconImage` |
-| Separate ⌘-Tab entry, ⌘Q, crash isolation | yes | separate process |
-| Menus *About X*, *Hide X*, *Quit X*, About panel | yes | renamed at runtime |
-| Bold app name in the menu bar | **no** — shows "JApp Runtime" | comes from the bundle's `CFBundleName` |
-| Name under the Dock tile, in Activity Monitor and in notifications | **no** — "JApp Runtime" | bundle identity |
+| Name in the menu bar (bold), under the Dock tile, in ⌘-Tab, Activity Monitor, Force Quit | yes | the app bundle's `CFBundleName` and file name |
+| Dock tile icon, Finder/Spotlight icon of the app bundle | yes | `AppIcon.icns` in the bundle (and `NSApp.applicationIconImage`) |
+| Notifications: sender name, icon, permission in System Settings | yes | the bundle id `dev.japp.app.<app-id>` |
+| Separate process, ⌘Q, crash isolation | yes | one process per app |
+| Menus *About X*, *Hide X*, *Quit X*, About panel | yes | renamed at run time |
+| Window positions, Open Recent | yes | the bundle's own preferences domain |
+| Runtime settings (`defaults write dev.japp.runtime …`) | shared | read from JApp Runtime's domain in every process |
+| `localStorage`, IndexedDB, cookies | yes | WebKit data store per app id, in `~/Library/WebKit/dev.japp.app.<app-id>/` |
+| `japp.storage` | yes | `Apps/<app-id>/storage.json`, independent of the bundle |
 | Finder icon of the `.japp` file | yes, while the metadata survives | `NSWorkspace.setIcon` (§5) |
 
-macOS has no public API to give one bundle several identities. Future options:
+The bundle id is `dev.japp.app.` + the app id, so a `.japp` cannot take over
+another program's identity: an app with id `com.apple.finder` becomes
+`dev.japp.app.com.apple.finder`. The *display* name is whatever the manifest says
+(an app can call itself "Finder"); the About panel always shows the app id and
+"Runs on JApp Runtime". Moving to app bundles changes the WebKit container, so
+`localStorage` written by a version before 0.3 starts empty; `japp.storage` is unaffected.
 
-1. **Per-app shim bundles.** Generate `~/Library/Application Support/JApp/Shims/<id>.app`
-   (Info.plist with the app's name, bundle id and icon; an executable that execs
-   the runtime with `--host`), ad-hoc sign it with `codesign` (present on every Mac).
-   This yields a true per-app name everywhere, including notifications and Spotlight,
-   still without compiling the app. Cost: Launch Services churn and cleanup.
-2. **Quick Look thumbnail extension** in the runtime that reads the icon out of
-   the archive — Finder would then show each app's icon even on copies that lost
-   their metadata. Requires an app-extension target (an Xcode build).
+Removing bundles: `japp bundles` lists them with the file each runs,
+`japp bundles clean` deletes those whose file is gone, `japp bundles remove <id>`
+deletes one (it is rebuilt the next time the app runs). Data is never deleted with a bundle.
+
+A **Quick Look thumbnail extension** in the runtime that reads the icon out of
+the archive would show each app's icon even on `.japp` copies that lost their
+Finder metadata; it needs an app-extension target (an Xcode build).
 
 ### 5. Finder icons
 
@@ -217,6 +273,7 @@ All optional (`defaults write dev.japp.runtime <key> <value>`):
 
 | Key | Default | Effect |
 |---|---|---|
+| `JAppAppBundles` | YES | Run each app through its own app bundle (its own name in the menu bar, Dock, ⌘-Tab, notifications). |
 | `JAppSingleProcess` | NO | Host every app in one process. |
 | `JAppSetFinderIcons` | YES | Apply app icons to `.japp` files in Finder. |
 | `JAppEditor` | first installed | Bundle id of the editor for Edit Source (`finder` for Finder). |
@@ -224,6 +281,7 @@ All optional (`defaults write dev.japp.runtime <key> <value>`):
 | `JAppDeveloperMode` | NO | Developer mode for every app: Develop menu (Reload, zoom) and Inspect Element without ⌥. |
 | `JAppAutomationDir`, `JAppAutomationScript`, `JAppAutomationQuit` | — | Test hooks used by `japp snapshot` and `Scripts/e2e-test.sh`. |
 | `JAppAutomationContextMenus`, `JAppAutomationProbePoints`, `JAppAutomationMenuChoice` | — | Test hooks: right-click and hit-test page points; pick an item in `japp.menu.popup` menus. |
+| `JAppAutomationAppBundles` | NO | Test hook: automation normally runs apps in-process; this goes through app bundles. |
 
 Lifecycle events are logged to the unified log:
 `log stream --predicate 'subsystem == "dev.japp.runtime"'`.

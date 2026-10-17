@@ -21,6 +21,8 @@ USAGE
                 [--script test.js | --eval "<js>"] [--timeout <s>]  print a JSON report (console, script result)
   japp restore-icon <App.japp>... [--remove]                   Re-apply (or remove) Finder icons
   japp storage <App.japp|folder|app-id> [--clear]              Show (or delete) an app's stored data
+  japp bundles [list | clean | remove <app-id|App.japp>]        Show or remove the per-app bundles that give
+                                                               apps their own name in the menu bar and Dock
   japp help | --version
 
 A .japp file is a ZIP archive with manifest.json at its root. See Docs/FORMAT.md.
@@ -208,6 +210,7 @@ func cmdInfo(_ raw: [String]) throws {
             "permissions": manifest.permissions.map(\.rawValue).sorted(), "files": files,
             "window": ["width": manifest.window.width, "height": manifest.window.height, "resizable": manifest.window.resizable],
             "dataDirectory": dataDirectory.path, "quarantined": quarantined, "sha256": package.archiveDigest ?? "",
+            "appBundle": AppBundle.existing(forAppID: manifest.id)?.url.path ?? "",
         ]
         let data = try JSONSerialization.data(withJSONObject: info, options: [.prettyPrinted, .sortedKeys])
         print(String(decoding: data, as: UTF8.self))
@@ -222,6 +225,7 @@ func cmdInfo(_ raw: [String]) throws {
     let permissions = manifest.permissions.map(\.rawValue).sorted()
     print("  permissions: \(permissions.isEmpty ? "(none)" : permissions.joined(separator: ", "))")
     print("  data:        \(dataDirectory.path)")
+    if let bundle = AppBundle.existing(forAppID: manifest.id) { print("  app bundle:  \(bundle.url.path)") }
     if package.kind == .archive {
         print("  archive:     \(byteCount((try? target.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)), sha256 \(package.archiveDigest?.prefix(16) ?? "")…")
         if quarantined { print("  quarantined: yes (downloaded; JApp Runtime will ask before the first launch)") }
@@ -415,6 +419,46 @@ func cmdStorage(_ raw: [String]) throws {
     }
 }
 
+// MARK: - japp bundles
+
+func cmdBundles(_ raw: [String]) throws {
+    let args = try Arguments(raw, valueOptions: [])
+    switch args.positional.first ?? "list" {
+    case "list":
+        let bundles = AppBundle.all()
+        if bundles.isEmpty { print("No app bundles yet. JApp Runtime makes one the first time an app runs.") }
+        for bundle in bundles {
+            let identity = bundle.identity
+            print("\(identity.name) \(identity.version) (\(identity.appID))\(bundle.isRunning ? " — running" : "")")
+            print("  bundle: \(bundle.url.path)")
+            print("  runs:   \(AppBundle.lastLaunched(appID: identity.appID)?.path ?? "(its .japp file was moved or deleted)")")
+        }
+    case "clean":
+        var removed = 0
+        for bundle in AppBundle.all() where AppBundle.lastLaunched(appID: bundle.identity.appID) == nil && !bundle.isRunning {
+            try bundle.remove()
+            print("Removed \(bundle.identity.name) (\(bundle.identity.appID)): its .japp file is gone")
+            removed += 1
+        }
+        if removed == 0 { print("Nothing to clean: the .japp file of every app bundle still exists.") }
+    case "remove":
+        guard args.positional.count >= 2 else { throw CLIError("missing app id or .japp file") }
+        let target = args.positional[1]
+        let id: String
+        if FileManager.default.fileExists(atPath: fileURL(target).path) {
+            do { id = try JAppPackage.load(from: fileURL(target)).manifest.id } catch { throw CLIError("\(error)") }
+        } else {
+            id = target
+        }
+        guard let bundle = AppBundle.existing(forAppID: id) else { throw CLIError("there is no app bundle for \(id)") }
+        guard !bundle.isRunning else { throw CLIError("\(bundle.identity.name) is running; quit it first") }
+        try bundle.remove()
+        print("Removed the app bundle of \(bundle.identity.name). JApp Runtime makes it again the next time the app runs; the app's data is kept.")
+    default:
+        throw CLIError("unknown action “\(args.positional[0])”: use list, clean or remove")
+    }
+}
+
 // MARK: - japp new
 
 func cmdNew(_ raw: [String]) throws {
@@ -552,6 +596,7 @@ do {
     case "snapshot", "screenshot": try cmdSnapshot(rest)
     case "restore-icon": try cmdRestoreIcon(rest)
     case "storage": try cmdStorage(rest)
+    case "bundles", "bundle": try cmdBundles(rest)
     case "help", "-h", "--help": print(usage)
     case "version", "--version", "-v": print("japp \(JAppVersion.runtime)")
     default:

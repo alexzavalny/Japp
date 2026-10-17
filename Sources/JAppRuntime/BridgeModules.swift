@@ -158,17 +158,19 @@ struct NotificationModule: BridgeModule {
         let center = UNUserNotificationCenter.current()
         let granted = (try? await center.requestAuthorization(options: [.alert, .sound])) ?? false
         guard granted else {
+            let sender = ProcessIdentity.appBundle?.name ?? "JApp Runtime"
             throw BridgeError(code: "NOT_AUTHORIZED",
-                              message: "Notifications are turned off for JApp Runtime. Enable them in System Settings › Notifications.")
+                              message: "Notifications are turned off for \(sender). Enable them in System Settings › Notifications.")
         }
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = args.string("body") ?? ""
         if let subtitle = args.string("subtitle") { content.subtitle = subtitle }
         if args.bool("sound") ?? true { content.sound = .default }
-        // Notifications are attributed to JApp Runtime; name the app so the user knows who sent it.
         content.threadIdentifier = session.manifest.normalizedID
-        if content.subtitle.isEmpty { content.subtitle = session.manifest.name }
+        // An app bundle's notifications carry the app's name and icon. Run inside
+        // JApp Runtime they are attributed to it, so name the app that sent them.
+        if !ProcessIdentity.isAppBundle && content.subtitle.isEmpty { content.subtitle = session.manifest.name }
         try await center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
         return nil
     }

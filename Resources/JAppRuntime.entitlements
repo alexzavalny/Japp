@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The launcher loads JAppRuntimeCore.dylib. Ad-hoc signatures carry no Team ID,
+	     so library validation would refuse the library; every other hardened-runtime
+	     protection stays on. App bundles are signed with the same entitlements. -->
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+</dict>
+</plist>

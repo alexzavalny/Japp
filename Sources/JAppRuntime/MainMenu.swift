@@ -5,17 +5,22 @@ import AppKit
 ///
 /// Browser-like commands (Reload, page zoom) live in a Develop menu that only
 /// appears in developer mode; a hidden menu's shortcuts are inactive, so ⌘R and
-/// friends stay free for the app itself.
+/// friends stay free for the app itself. In an app bundle the runtime's own
+/// commands (About JApp Runtime, Install Command-Line Tool, Open…, Help) are left
+/// out, so the menu bar reads like the app's own.
 @MainActor
 final class MainMenu {
     private let aboutItem = NSMenuItem(title: "About JApp Runtime", action: #selector(AppDelegate.showAbout(_:)), keyEquivalent: "")
     private let hideItem = NSMenuItem(title: "Hide JApp Runtime", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
     private let quitItem = NSMenuItem(title: "Quit JApp Runtime", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
     private let developItem = NSMenuItem(title: "Develop", action: nil, keyEquivalent: "")
+    private var appMenuItem: NSMenuItem?
 
     func install() {
         let main = NSMenu()
-        main.addItem(submenu(appMenu(), title: "JApp Runtime"))
+        let app = submenu(appMenu(), title: "JApp Runtime")
+        appMenuItem = app
+        main.addItem(app)
         main.addItem(submenu(fileMenu(), title: "File"))
         main.addItem(submenu(editMenu(), title: "Edit"))
         main.addItem(submenu(viewMenu(), title: "View"))
@@ -26,16 +31,24 @@ final class MainMenu {
         main.addItem(developItem)
         let window = windowMenu()
         main.addItem(submenu(window, title: "Window"))
-        main.addItem(submenu(helpMenu(), title: "Help"))
+        let help = helpMenu()
+        main.addItem(submenu(help, title: "Help"))
         NSApp.mainMenu = main
         NSApp.windowsMenu = window
+        NSApp.helpMenu = help  // adds the system's menu search field
     }
+
+    private var isRuntime: Bool { !ProcessIdentity.isAppBundle }
 
     func setDevelopMenuVisible(_ visible: Bool) {
         developItem.isHidden = !visible
     }
 
     func setAppName(_ name: String) {
+        // The menu bar shows the process's name in bold whatever this title says;
+        // it matters to VoiceOver and to anything that reads the menus.
+        appMenuItem?.title = name
+        appMenuItem?.submenu?.title = name
         aboutItem.title = "About \(name)"
         hideItem.title = "Hide \(name)"
         quitItem.title = "Quit \(name)"
@@ -57,9 +70,11 @@ final class MainMenu {
     private func appMenu() -> NSMenu {
         let menu = NSMenu()
         menu.addItem(aboutItem)
-        menu.addItem(item("About JApp Runtime", #selector(AppDelegate.showRuntimeAbout(_:))))
-        menu.addItem(.separator())
-        menu.addItem(item("Install Command-Line Tool…", #selector(AppDelegate.installCommandLineTool(_:))))
+        if isRuntime {
+            menu.addItem(item("About JApp Runtime", #selector(AppDelegate.showRuntimeAbout(_:))))
+            menu.addItem(.separator())
+            menu.addItem(item("Install Command-Line Tool…", #selector(AppDelegate.installCommandLineTool(_:))))
+        }
         menu.addItem(.separator())
         let services = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")
         let servicesMenu = NSMenu(title: "Services")
@@ -77,8 +92,10 @@ final class MainMenu {
 
     private func fileMenu() -> NSMenu {
         let menu = NSMenu()
-        menu.addItem(item("Open…", #selector(AppDelegate.openDocument(_:)), "o"))
-        menu.addItem(.separator())
+        if isRuntime {
+            menu.addItem(item("Open…", #selector(AppDelegate.openDocument(_:)), "o"))
+            menu.addItem(.separator())
+        }
         menu.addItem(item("Edit Source…", #selector(AppDelegate.editSource(_:)), "e", [.command, .option]))
         menu.addItem(item("Reveal in Finder", #selector(AppDelegate.revealInFinder(_:)), "r", [.command, .shift]))
         menu.addItem(item("Restore Finder Icon", #selector(AppDelegate.restoreFinderIcon(_:))))
@@ -128,7 +145,7 @@ final class MainMenu {
 
     private func helpMenu() -> NSMenu {
         let menu = NSMenu()
-        menu.addItem(item("JApp Runtime Help", #selector(AppDelegate.showHelp(_:))))
+        if isRuntime { menu.addItem(item("JApp Runtime Help", #selector(AppDelegate.showHelp(_:)))) }
         return menu
     }
 }

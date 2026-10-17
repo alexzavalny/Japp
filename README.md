@@ -93,8 +93,11 @@ const username = await japp.storage.get("username");
 * **Runtime** — Swift/AppKit app hosting a `WKWebView` per app. Files are served
   straight from the archive in memory through a `WKURLSchemeHandler` at
   `japp-resource://<app-id>/`; nothing is extracted to run an app.
-* **One process per app** — every app gets its own Dock tile with its own icon,
-  its own ⌘Q and crash isolation; opening a running app activates it.
+* **A real app per app** — JApp Runtime generates a tiny signed bundle for each app
+  (`~/Library/Application Support/JApp/AppBundles`), so every app runs as its own
+  process with its own name in the menu bar, Dock, ⌘-Tab and notifications, its
+  own icon, ⌘Q and crash isolation. The bundle holds only a 53 KB launcher that
+  loads the runtime from JApp Runtime.app; you can keep it in the Dock.
 * **Native API** — `window.japp` (storage, file dialogs, notifications, clipboard,
   CORS-free HTTP, native context menus, window), Promise-based, permission-checked in Swift ([API.md](Docs/API.md)).
 * **Native feel** — no text selection on labels, arrow cursor, no bouncing page,
@@ -132,9 +135,9 @@ Mac: **[Docs/TESTING.md](Docs/TESTING.md)**.
 
 ### Known limitations
 
-* The menu-bar app name and notification sender read "JApp Runtime" (macOS ties
-  them to the bundle); window, Dock tile, menus and About box are per app. Future
-  per-app shim bundles could fix this — see [ARCHITECTURE.md](Docs/ARCHITECTURE.md#4-app-identity-what-is-and-is-not-per-app).
+* Opening a `.japp` passes through JApp Runtime (hidden, ~0.6 s) before the app's
+  own bundle starts; see [ARCHITECTURE.md](Docs/ARCHITECTURE.md#3-one-process-per-app-each-in-a-bundle-of-its-own).
+  An app renamed while it runs keeps its old name in the menu bar until it is reopened.
 * Finder icons are file metadata and are lost when a file is emailed or
   downloaded; the runtime restores them when the app is opened.
 * The runtime is ad-hoc signed and not sandboxed; see [SECURITY.md](Docs/SECURITY.md#known-limitations).

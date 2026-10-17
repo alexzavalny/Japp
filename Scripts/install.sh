@@ -18,10 +18,13 @@ fi
 mkdir -p "$DEST_DIR"
 DEST="$DEST_DIR/JApp Runtime.app"
 
-# Quit running copies so the new version is used.
-if pgrep -x JAppRuntime >/dev/null; then
-    echo "==> Quitting running JApp Runtime processes"
+# Quit running copies so the new version is used: JApp Runtime and the apps
+# running through their app bundles (~/Library/Application Support/JApp/AppBundles).
+APP_BUNDLES="/JApp/AppBundles/.*\.app/Contents/MacOS/"
+if pgrep -x JAppRuntime >/dev/null || pgrep -f "$APP_BUNDLES" >/dev/null; then
+    echo "==> Quitting running JApp apps"
     pkill -x JAppRuntime || true
+    pkill -f "$APP_BUNDLES" || true
     sleep 1
 fi
 
@@ -44,5 +47,6 @@ esac
 
 echo
 echo "Installed JApp Runtime $(defaults read "$DEST/Contents/Info" CFBundleShortVersionString)."
+echo "  Each app gets its own small app bundle the first time it runs (japp bundles)."
 echo "  Try:  open \"$ROOT/build/Calculator.japp\""
 echo "        japp help"

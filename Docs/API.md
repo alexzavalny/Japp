@@ -16,7 +16,7 @@ human-readable `message`:
 | `PERMISSION_DENIED` | The manifest does not declare the permission the method needs. The message says what to add. |
 | `BAD_ARGUMENTS` | A required argument is missing or has the wrong type. |
 | `NOT_SUPPORTED` | The module or method does not exist in this runtime version. |
-| `NOT_AUTHORIZED` | macOS refused (e.g. notifications are turned off for JApp Runtime). |
+| `NOT_AUTHORIZED` | macOS refused (e.g. notifications are turned off for the app). |
 | `NETWORK_ERROR` | `japp.http.fetch` could not connect (offline, DNS, TLS, timeout). |
 | `STORAGE_ERROR` | Invalid key/value or a storage quota was hit. |
 | `FAILED` | Anything else (the message explains). |
@@ -41,7 +41,7 @@ japp.app.version       // "1.0.0"
 japp.app.description   // "" if none
 japp.app.permissions   // ["storage"]
 japp.hasPermission("network")   // false
-japp.runtimeVersion    // "0.2.0"
+japp.runtimeVersion    // "0.3.0"
 ```
 
 ## japp.storage — permission `storage`
@@ -131,9 +131,12 @@ The standard `alert()`, `confirm()` and `prompt()` also work and show native she
 await japp.notification.show({ title: "Timer done", body: "Time for a break", sound: true });
 ```
 
-`subtitle` is optional and defaults to the app's name. The first call asks macOS
-for permission on behalf of JApp Runtime; notifications appear under JApp
-Runtime's name and icon (see ARCHITECTURE.md, *App identity*).
+`subtitle` is optional. The first call asks macOS for permission. Notifications
+come from the app itself — its name and icon, its own entry in System Settings ›
+Notifications — because every app runs from a bundle of its own (ARCHITECTURE.md,
+*App identity*). Only when an app runs inside JApp Runtime (`japp run --console`,
+`JAppAppBundles NO`) are they sent as JApp Runtime, with the app's name as the
+default subtitle.
 
 ## japp.clipboard — permission `clipboard`
 

@@ -73,6 +73,21 @@ source instead. Confirming removes the attribute, as Gatekeeper does.
 **Saving edits**: validated before writing; atomic replacement; previous
 version kept in `backups/`; concurrent external modification detected.
 
+**App bundles** (the per-app `.app` that gives each app its own name and icon)
+* Contain no app code and no runtime code: an Info.plist, the icon, and a copy of
+  JApp Runtime's launcher, which loads `JAppRuntimeCore.dylib` from JApp Runtime.app.
+* Bundle id `dev.japp.app.<app-id>`: an app cannot claim another program's bundle
+  id, its Launch Services registration or its privacy (TCC) grants.
+* Declare no document types, URL schemes, services or exported types, so a bundle
+  never becomes the handler of a file or link. File names are sanitised (no `/`,
+  `:`, control characters or leading dots).
+* Built in a staging folder, ad-hoc signed with the hardened runtime, then swapped
+  in; never modified while the app runs. JApp Runtime.app and app bundles carry one
+  entitlement, `com.apple.security.cs.disable-library-validation`: ad-hoc
+  signatures have no Team ID, so library validation would refuse the runtime
+  library. Other hardened-runtime protections (e.g. no `DYLD_*` injection) stay on.
+* Built only for apps that passed validation and, if downloaded, the confirmation above.
+
 ## Known limitations
 
 * **No process sandbox for the runtime.** JApp Runtime is not built with the App
@@ -90,8 +105,11 @@ version kept in `backups/`; concurrent external modification detected.
   also use `japp.http.fetch`, which is not subject to CORS: it can read responses
   from any reachable server, including ones on your local network. It never sends
   cookies, cached data or stored credentials, so it cannot act within your web sessions.
-* **Shared identity.** Notifications and the menu-bar name show "JApp Runtime".
-  An app can set its window title to anything, including another app's name.
+* **Names are not verified.** Each app runs from a bundle named after its manifest
+  `name`, so an app can call itself "Finder" in the menu bar and Dock, or set its
+  window title to anything. Its bundle id is always `dev.japp.app.<app-id>`, so it
+  cannot take over another program's identity, Launch Services registration or
+  privacy (TCC) permissions, and its About panel names its id and JApp Runtime.
 * **Same id, same data.** Any app can claim any id and thereby read that id's
   storage. Ids are not tied to a signature or author. (Fine for personal use;
   signing apps would be needed before sharing them widely.)

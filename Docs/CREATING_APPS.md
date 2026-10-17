@@ -142,6 +142,11 @@ You can also skip workspaces entirely: `japp unpack App.japp ./App`, edit, `japp
   `"backgroundColor"`. See *Making it feel native* below.
 * **Icon:** square 1024×1024 PNG with the artwork inset ~10% (macOS icons are a
   rounded square of 824×824 on a 1024 canvas).
+* **Name, icon and version are the app's identity on the Mac.** Each app runs from
+  a small app bundle JApp Runtime makes from the manifest, so `name` is what the
+  menu bar, Dock, ⌘-Tab and notifications show, and `icon` is its Dock and
+  Spotlight icon. Keep `name` short (it is bold in the menu bar); changing it
+  renames the bundle on the next launch.
 * Use `alert`/`confirm`, `<input type="file">` and `<a download>` freely — they map to native panels.
 
 ## Making it feel native
