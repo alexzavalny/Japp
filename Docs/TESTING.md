@@ -3,9 +3,9 @@
 ## Automated
 
 ```sh
-swift test                 # 59 unit tests (JAppKit), no GUI needed
+swift test                 # 66 unit tests (JAppKit), no GUI needed
 Scripts/build.sh && Scripts/install.sh
-Scripts/e2e-test.sh        # 112 end-to-end checks against the installed runtime (windows flash briefly)
+Scripts/e2e-test.sh        # 126 end-to-end checks against the installed runtime (windows flash briefly)
 ```
 
 **Unit tests** (`Tests/JAppKitTests`) cover the ZIP reader/writer (round trips;
@@ -19,7 +19,10 @@ workspaces (unpack, change tracking, save/backup/prune, invalid source refused,
 external-change detection, broken manifests still editable, GUI + CLI sharing a workspace)
 and app bundles (namespaced bundle ids, file-name sanitising, Info.plist without
 handler keys, valid ad-hoc signature, reuse when current, rename in place keeping
-the folder, `.icns` with every size, launch record following a moved file).
+the folder, `.icns` with every size, launch record following a moved file)
+and the new-app template (valid archive named after its file, replacing a file,
+names escaped in HTML and JSON, ids from any script made unique, folders,
+an AGENTS.md whose description of the workspace layout matches `SourceWorkspace`).
 
 **End-to-end tests** (`Scripts/e2e-test.sh`, data isolated in a temp directory)
 check, on the real installed app:
@@ -49,6 +52,12 @@ check, on the real installed app:
   from the runtime window (its Save & Run code path, triggered via the automation
   hook): the change lands in the `.japp` and the relaunched app shows it; invalid
   source is refused and leaves the file intact; closing removes the workspace;
+* New App (`--new`, the code path of *File › New App…* after its Save panel):
+  the `.japp` is written, valid, named after the file, has its Finder icon and
+  opens in Edit Source; following AGENTS.md (`japp save` the `archivePath` of
+  `../session.json`) saves it; Save & Run runs it at 480×360; the Hello, World! page
+  greets a typed name and remembers it across launches; JApp Runtime's File menu
+  starts with New App… (app bundles have none); an unwritable location is reported;
 * the Finder Services item "Edit JApp Source" (invoked with `NSPerformService`);
 * `japp.http.fetch` against a local server that sends no CORS headers (works,
   while `fetch()` is blocked), refuses `file:` URLs, requires `network`;
@@ -111,6 +120,7 @@ which the automated environment could not do:
 | Double-click in Finder | Double-click `build/Calculator.japp`. Same Launch Services path as `open`, which is tested. |
 | Right-click › Services / Quick Actions › **Edit JApp Source** appears in Finder's menu | The service is registered (`/System/Library/CoreServices/pbs -dump`) and works when invoked; if it is not listed, enable it in System Settings › Keyboard › Keyboard Shortcuts › Services › Files and Folders. |
 | Clicking **Save** / **Save & Run** / **Discard** / closing with unsaved changes | Tested through the same methods, but not by clicking. |
+| *File › New App…* (⌘N) and the welcome window's **New App…** button: the Save panel ("App Name:", Create, Replace) | Everything after the panel is tested (`--new`); the panel itself needs clicks. The welcome window with the new button was rendered to PNG. |
 | Edit Source opening the workspace in **VS Code / Zed / Finder** | Uses `NSWorkspace.open(_:withApplicationAt:)`. Automated runs skip this step (so tests don't open windows in your editor); installed editors are detected by bundle id. |
 | Dock tile shows the app's icon and name; ⌘-Tab; the bold menu-bar name | The process's name and bundle are verified (`lsappinfo`, report); the Dock and menu bar themselves were not looked at. |
 | The app comes to the front after a Finder double-click | JApp Runtime yields activation to the app bundle. Tests start from a background terminal, where macOS does not let any app take focus, so this needs a real double-click. |

@@ -5,7 +5,7 @@ import JAppKit
 @MainActor
 final class WelcomeWindowController: NSWindowController {
     init() {
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 340),
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 340),
                               styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         window.title = "JApp Runtime"
         window.isReleasedWhenClosed = false
@@ -28,15 +28,16 @@ final class WelcomeWindowController: NSWindowController {
         let version = NSTextField(labelWithString: "Version \(JAppVersion.runtime)")
         version.textColor = .secondaryLabelColor
         let text = NSTextField(wrappingLabelWithString:
-            "Double-click a .japp file in Finder to run it. To change an app, right-click it and choose Services › Edit JApp Source (or use File › Edit Source in this app).")
+            "Double-click a .japp file in Finder to run it, or click New App to make your own. To change an app, right-click it and choose Services › Edit JApp Source (or use File › Edit Source in this app).")
         text.alignment = .center
-        text.preferredMaxLayoutWidth = 400
+        text.preferredMaxLayoutWidth = 460
 
         let open = NSButton(title: "Open App…", target: NSApp.delegate, action: #selector(AppDelegate.openDocument(_:)))
         open.keyEquivalent = "\r"
         let edit = NSButton(title: "Edit Source…", target: NSApp.delegate, action: #selector(AppDelegate.editSource(_:)))
+        let create = NSButton(title: "New App…", target: NSApp.delegate, action: #selector(AppDelegate.newApp(_:)))
         let example = NSButton(title: "Open Calculator Example", target: NSApp.delegate, action: #selector(AppDelegate.openExample(_:)))
-        let buttons = NSStackView(views: [example, edit, open])
+        let buttons = NSStackView(views: [example, edit, create, open])
         buttons.spacing = 10
 
         let stack = NSStackView(views: [icon, title, version, text, buttons])

@@ -3,14 +3,16 @@ import JAppKit
 
 /// Launch arguments understood by the runtime binary.
 ///
-///     JAppRuntime [--host <file.japp|folder>]… [--edit <file.japp>]… [--console] [--develop] [<file.japp>…]
+///     JAppRuntime [--host <file.japp|folder>]… [--edit <file.japp>]… [--new <file.japp>]… [--console] [--develop] [<file.japp>…]
 ///
 /// `--host` is how one runtime process asks a fresh process to host an app
-/// (process-per-app); `japp run` and `japp edit` use the same flags.
+/// (process-per-app); `japp run` and `japp edit` use the same flags. `--new`
+/// does what *File › New App…* does once its Save panel is answered.
 /// Single-dash `-Key value` pairs are NSUserDefaults overrides and are skipped here.
 struct LaunchArguments {
     var hostURLs: [URL] = []
     var editURLs: [URL] = []
+    var newURLs: [URL] = []
     var console = false
     var develop = false
 
@@ -26,6 +28,9 @@ struct LaunchArguments {
                 index += 1
             case "--edit" where index + 1 < arguments.count:
                 result.editURLs.append(url(arguments[index + 1]))
+                index += 1
+            case "--new" where index + 1 < arguments.count:
+                result.newURLs.append(url(arguments[index + 1]))
                 index += 1
             case "--console":
                 result.console = true

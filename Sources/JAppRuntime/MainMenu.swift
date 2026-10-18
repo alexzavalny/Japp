@@ -6,7 +6,7 @@ import AppKit
 /// Browser-like commands (Reload, page zoom) live in a Develop menu that only
 /// appears in developer mode; a hidden menu's shortcuts are inactive, so ⌘R and
 /// friends stay free for the app itself. In an app bundle the runtime's own
-/// commands (About JApp Runtime, Install Command-Line Tool, Open…, Help) are left
+/// commands (About JApp Runtime, Install Command-Line Tool, New App…, Open…, Help) are left
 /// out, so the menu bar reads like the app's own.
 @MainActor
 final class MainMenu {
@@ -93,6 +93,7 @@ final class MainMenu {
     private func fileMenu() -> NSMenu {
         let menu = NSMenu()
         if isRuntime {
+            menu.addItem(item("New App…", #selector(AppDelegate.newApp(_:)), "n"))
             menu.addItem(item("Open…", #selector(AppDelegate.openDocument(_:)), "o"))
             menu.addItem(.separator())
         }

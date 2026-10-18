@@ -466,113 +466,17 @@ func cmdNew(_ raw: [String]) throws {
     guard let name = args.positional.first?.trimmingCharacters(in: .whitespaces), !name.isEmpty else {
         throw CLIError("missing app name, e.g. japp new \"Todo List\"")
     }
-    let slug = name.lowercased().map { $0.isLetter || $0.isNumber ? String($0) : "-" }.joined()
-        .split(separator: "-").joined(separator: "-")
-    let id = args.options["id"] ?? "com.example.\(slug.isEmpty ? "app" : slug)"
+    let id = args.options["id"] ?? AppTemplate.suggestedID(forName: name)
     guard Manifest.isValidID(id) else { throw CLIError("“\(id)” is not a valid app id (use reverse-DNS form, e.g. com.example.todo)") }
 
     let parent = args.options["dir"].map(fileURL) ?? fileURL(FileManager.default.currentDirectoryPath)
     let folder = parent.appendingPathComponent(name)
     if FileManager.default.fileExists(atPath: folder.path) { throw CLIError("“\(folder.path)” already exists") }
 
-    let manifest: [String: Any] = [
-        "manifestVersion": 1, "id": id, "name": name, "version": "1.0.0",
-        "description": "\(name), a JApp.", "entry": "index.html", "icon": "assets/icon.png",
-        "window": ["width": 480, "height": 360, "minWidth": 320, "minHeight": 240, "resizable": true],
-        "permissions": ["storage"],
-    ]
-    let escapedName = name.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;")
-    let files: [String: Data] = [
-        "manifest.json": try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]),
-        "index.html": Data(Templates.html(title: escapedName).utf8),
-        "style.css": Data(Templates.css.utf8),
-        "app.js": Data(Templates.js.utf8),
-        "assets/icon.png": try Templates.icon(letter: String(name.first!).uppercased()),
-    ]
-    for (path, data) in files {
-        let url = folder.appendingPathComponent(path)
-        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try data.write(to: url)
-    }
-    print("Created \(folder.path)")
+    let manifest = try AppTemplate.createFolder(at: folder, name: name, id: id)
+    print("Created \(folder.path) (\(manifest.id))")
     print("  Try it now:   japp run \"\(folder.path)\" --console")
     print("  Package it:   japp pack \"\(folder.path)\" --output \"\(name).japp\"")
-}
-
-enum Templates {
-    static func html(title: String) -> String {
-        """
-        <!doctype html>
-        <html lang="en">
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <title>\(title)</title>
-          <link rel="stylesheet" href="style.css">
-        </head>
-        <body>
-          <main>
-            <h1>\(title)</h1>
-            <p>You have opened this app <strong id="count">…</strong> times.</p>
-            <button id="reset" type="button">Reset</button>
-          </main>
-          <script src="app.js"></script>
-        </body>
-        </html>
-
-        """
-    }
-
-    static let css = """
-        :root { color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-        body { margin: 0; min-height: 100vh; display: grid; place-items: center; }
-        main { text-align: center; padding: 24px; }
-        h1 { font-size: 28px; margin: 0 0 12px; }
-        button { font: inherit; padding: 6px 16px; border-radius: 8px; border: 1px solid #8884; background: #8881; cursor: pointer; }
-
-        """
-
-    static let js = """
-        // window.japp is provided by JApp Runtime. See Docs/API.md.
-        const countLabel = document.getElementById("count");
-
-        async function start() {
-          const opened = (await japp.storage.get("timesOpened", 0)) + 1;
-          await japp.storage.set("timesOpened", opened);
-          countLabel.textContent = opened;
-        }
-
-        document.getElementById("reset").addEventListener("click", async () => {
-          await japp.storage.remove("timesOpened");
-          countLabel.textContent = 0;
-        });
-
-        start().catch((error) => {
-          countLabel.textContent = "?";
-          console.error(error);
-        });
-
-        """
-
-    /// A simple generated icon: a coloured rounded square with the app's initial.
-    static func icon(letter: String) throws -> Data {
-        let size = 1024
-        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: size, pixelsHigh: size, bitsPerSample: 8,
-                                         samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
-                                         bytesPerRow: 0, bitsPerPixel: 0) else { throw CLIError("could not create the icon") }
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-        let body = NSBezierPath(roundedRect: NSRect(x: 100, y: 100, width: 824, height: 824), xRadius: 185, yRadius: 185)
-        let hue = CGFloat(abs(letter.unicodeScalars.first.map { Int($0.value) } ?? 0) % 360) / 360
-        NSGradient(starting: NSColor(hue: hue, saturation: 0.55, brightness: 0.95, alpha: 1),
-                   ending: NSColor(hue: hue, saturation: 0.75, brightness: 0.65, alpha: 1))!.draw(in: body, angle: -90)
-        let attributes: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 480, weight: .bold), .foregroundColor: NSColor.white]
-        let textSize = (letter as NSString).size(withAttributes: attributes)
-        (letter as NSString).draw(at: NSPoint(x: 512 - textSize.width / 2, y: 512 - textSize.height / 2), withAttributes: attributes)
-        NSGraphicsContext.restoreGraphicsState()
-        guard let png = rep.representation(using: .png, properties: [:]) else { throw CLIError("could not encode the icon") }
-        return png
-    }
 }
 
 // MARK: - Main

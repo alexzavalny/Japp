@@ -54,11 +54,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let defaultLaunch = notification.userInfo?[NSApplication.launchIsDefaultUserInfoKey] as? Bool ?? false
-        if ProcessIdentity.isAppBundle && arguments.hostURLs.isEmpty && arguments.editURLs.isEmpty {
+        let opensNothing = arguments.hostURLs.isEmpty && arguments.editURLs.isEmpty && arguments.newURLs.isEmpty
+        if ProcessIdentity.isAppBundle && opensNothing {
             // Started from the Dock, Spotlight or Finder rather than by JApp Runtime.
             hasOpenedSomething = true
             manager.openOwnApp()
-        } else if defaultLaunch && arguments.hostURLs.isEmpty && arguments.editURLs.isEmpty {
+        } else if defaultLaunch && opensNothing {
             ProcessIdentity.becomeRegularApp()  // JApp Runtime itself was opened: it will greet the user
         }
         for url in arguments.hostURLs {
@@ -68,6 +69,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         for url in arguments.editURLs {
             hasOpenedSomething = true
             manager.editSource(url)
+        }
+        for url in arguments.newURLs {
+            hasOpenedSomething = true
+            manager.createApp(at: url)
         }
         NSUpdateDynamicServices()
         // Documents and service requests arrive just after launch; only greet
@@ -150,6 +155,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         guard panel.runModal() == .OK else { return }
         welcome?.close()
         for url in panel.urls { manager.open(url) }
+    }
+
+    /// Asks for the new app's name (and where to keep it), then writes a
+    /// "Hello, World!" app there and opens its source in the code editor.
+    @objc func newApp(_ sender: Any?) {
+        let panel = NSSavePanel()
+        panel.title = "New App"
+        panel.message = "Name your app. It starts as a “Hello, World!” app and opens in your code editor."
+        panel.nameFieldLabel = "App Name:"
+        panel.nameFieldStringValue = AppTemplate.defaultName
+        panel.prompt = "Create"
+        panel.allowedContentTypes = [Self.jappType]
+        panel.isExtensionHidden = true
+        panel.canSelectHiddenExtension = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        // Closed only once the Edit Source window is up: the last window closing quits the runtime.
+        if manager.createApp(at: url) { welcome?.close() }
     }
 
     @objc func editSource(_ sender: Any?) {

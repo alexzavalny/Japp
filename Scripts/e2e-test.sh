@@ -85,7 +85,7 @@ if bundle_open "$WORK/Bundled.japp" "$WORK/bundle1"; then
     check "process identity is the app's" "$(json "$B" "(d['identity']['localizedName'], d['identity']['bundleName'], d['identity']['executable'])")" "('Calculator', 'Calculator', 'Calculator')"
     check "bundle id is namespaced" "$(json "$B" "d['identity']['bundleIdentifier']")" "dev.japp.app.com.example.calculator"
     check "app menu names the app only" "$(json "$B" "d['native']['menuBar'][0]['title'], [i for i in d['native']['menuBar'][0]['items'] if 'JApp' in i or 'Command-Line' in i or 'Calculator' in i]")" "('Calculator', ['About Calculator', 'Hide Calculator', 'Quit Calculator'])"
-    check "no runtime commands in the File menu" "$(json "$B" "[i for m in d['native']['menuBar'] if m['title'] == 'File' for i in m['items'] if i in ('Open…', 'Edit Source…')]")" "['Edit Source…']"
+    check "no runtime commands in the File menu" "$(json "$B" "[i for m in d['native']['menuBar'] if m['title'] == 'File' for i in m['items'] if i in ('New App…', 'Open…', 'Edit Source…')]")" "['Edit Source…']"
     check "the app still works" "$(json "$B" "(d['ok'], d['windowTitle'])")" "(True, 'Calculator')"
 else
     fail "the app runs in its own app bundle" "no report"
@@ -190,6 +190,57 @@ if wait_for "$WORK/edit-report/edit-report.json"; then
 else
     fail "Edit Source window opened the workspace"
 fi
+
+echo "==> New App (File › New App… once its Save panel is answered)"
+NEW="$WORK/Hello World.japp"
+mkdir -p "$WORK/new-report"
+open -n --env "JAPP_SUPPORT_DIR=$JAPP_SUPPORT_DIR" -a "$APP" --args --new "$NEW" -JAppAutomationDir "$WORK/new-report"
+if wait_for "$WORK/new-report/edit-report.json"; then
+    E="$WORK/new-report/edit-report.json"
+    check "New App writes the .japp and opens its source" "$(json "$E" "(d['archive'].split('/')[-1], d['changes'])")" "('Hello World.japp', [])"
+    SOURCE="$(json "$E" "d['sourceFolder']")"
+    check "source folder holds the template" "$(cd "$SOURCE" && LC_ALL=C ls | tr '\n' ' ')" "AGENTS.md app.js assets index.html manifest.json style.css "
+    # What AGENTS.md tells agents: ../session.json names the .japp; `japp save` it.
+    ARCHIVE="$(json "$(dirname "$SOURCE")/session.json" "d['archivePath']")"
+    check "AGENTS.md: ../session.json names the .japp" "$(grep -q '../session.json' "$SOURCE/AGENTS.md" && echo mentioned) $(basename "$ARCHIVE")" "mentioned Hello World.japp"
+    "$JAPP" save "$ARCHIVE" >/dev/null 2>&1 && pass "AGENTS.md: japp save <archivePath> saves it" || fail "AGENTS.md: japp save <archivePath> saves it" "$("$JAPP" save "$ARCHIVE" 2>&1)"
+    "$JAPP" validate "$NEW" >/dev/null 2>&1 && pass "the new app is valid" || fail "the new app is valid" "$("$JAPP" validate "$NEW" 2>&1)"
+    "$JAPP" info "$NEW" --json > "$WORK/new-info.json" 2>/dev/null
+    check "named after the file, id from the name" "$(json "$WORK/new-info.json" "(d['name'], d['id'], d['permissions'])")" "('Hello World', 'com.example.hello-world', ['storage'])"
+    xattr -p com.apple.ResourceFork "$NEW" >/dev/null 2>&1 && pass "new app has its Finder icon" || fail "new app has its Finder icon"
+    "$WORK/post-notification" dev.japp.runtime.automation.editor saveAndRun
+    if wait_for "$WORK/new-report/report.json"; then
+        R="$WORK/new-report/report.json"
+        check "Save & Run runs the new app" "$(json "$R" "(d['ok'], d['windowTitle'], d['contentSize']['width'], d['contentSize']['height'])")" "(True, 'Hello World', 480, 360)"
+        check "JApp Runtime's File menu has New App…" "$(json "$R" "[m['items'][0] for m in d['native']['menuBar'] if m['title'] == 'File']")" "['New App…']"
+    else
+        fail "Save & Run runs the new app"
+    fi
+    "$WORK/post-notification" dev.japp.runtime.automation.editor close
+    sleep 1
+    [ -d "$SOURCE" ] && fail "closing removes the new app's workspace" || pass "closing removes the new app's workspace"
+    pkill -f "JAppAutomationDir $WORK/new-report" 2>/dev/null
+else
+    fail "New App writes the .japp and opens its source"
+fi
+"$JAPP" snapshot "$NEW" --output "$WORK/new.png" --eval "
+  const out = { greeting: document.querySelector('#greeting').textContent };
+  document.querySelector('#name').value = 'Alex';
+  document.querySelector('#hello').requestSubmit();
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  out.greeted = document.querySelector('#greeting').textContent;
+  out.stored = await japp.storage.get('name');
+  return out;" > "$WORK/new-run1.json" 2>/dev/null
+check "Hello, World! app greets and stores the name" "$(json "$WORK/new-run1.json" "(d['scriptResult']['greeting'], d['scriptResult']['greeted'], d['scriptResult']['stored'])")" "('Hello, World!', 'Hello, Alex!', 'Alex')"
+check "new app: no console errors" "$(json "$WORK/new-run1.json" "[c for c in d['console'] if c['level'] == 'error']")" "[]"
+"$JAPP" snapshot "$NEW" --output "$WORK/new2.png" --eval "return document.querySelector('#greeting').textContent" > "$WORK/new-run2.json" 2>/dev/null
+check "the name is remembered across launches" "$(json "$WORK/new-run2.json" "d['scriptResult']")" "Hello, Alex!"
+mkdir -p "$WORK/new-fail"
+"$APP/Contents/MacOS/JAppRuntime" --new "$WORK/no/such/folder/App.japp" -JAppAutomationDir "$WORK/new-fail" -JAppAutomationQuit YES >/dev/null 2>&1 &
+NEWPID=$!
+wait_for "$WORK/new-fail/report.json"; sleep 0.5
+kill "$NEWPID" 2>/dev/null; wait "$NEWPID" 2>/dev/null
+check "New App reports a file it can't write" "$(json "$WORK/new-fail/report.json" "(d['ok'], d['file'].split('/')[-1])")" "(False, 'App.japp')"
 
 echo "==> Finder Services"
 mkdir -p "$WORK/service-report"

@@ -12,6 +12,7 @@ Sources/
 │   ├── Packager.swift    folder → .japp, safe extraction, atomic writes
 │   ├── KeyValueStore     japp.storage persistence (JSON file + flock)
 │   ├── SourceWorkspace   Edit Source: unpack, track changes, validate, repack, back up
+│   ├── AppTemplate       the "Hello, World!" app (and its AGENTS.md) of File › New App… and `japp new`
 │   ├── AppBundle, ICNS   per-app bundles: generate, sign, update in place, launch record
 │   ├── FinderIcon        custom Finder icons
 │   └── InstanceRegistry  which process hosts which app
@@ -204,8 +205,11 @@ changes made by other programs; the user then chooses to keep or replace them.
 
 Entry points: Finder *Services › Edit JApp Source* (an `NSServices` entry in the
 runtime's Info.plist — registering a file type alone adds no context-menu
-command), *File › Edit Source…* in any app, `japp edit`, and the "Edit Source…"
-button offered when an app fails to open. `japp save` shares the same workspace
+command), *File › Edit Source…* in any app, `japp edit`, the "Edit Source…"
+button offered when an app fails to open, and JApp Runtime's *File › New App…*,
+which asks for a name in a Save panel, writes `AppTemplate`'s app there (named
+after the file, with an id no app on this Mac uses yet) and opens it for editing
+like any other app (`--new <path>` does the same without the panel). `japp save` shares the same workspace
 (state lives in `session.json`), so the GUI and the terminal can be mixed.
 
 A built-in text editor was considered; delegating to the user's real code

@@ -49,8 +49,16 @@ Then try the full loop:
 
 ## Make your own
 
+Open JApp Runtime and choose **File › New App…** (⌘N; also a button in its
+welcome window). Name the app and pick a folder: JApp writes `<Name>.japp` — a
+"Hello, World!" app with a greeting, a text field and a button, plus an `AGENTS.md`
+that tells AI coding agents how JApps work — and opens its source in your code
+editor. Edit (or ask your agent to), click **Save & Run**, and it runs.
+
+From Terminal:
+
 ```sh
-japp new "Todo List"                         # a working starter app
+japp new "Todo List"                         # the same starter app, as a folder
 japp run "Todo List" --console               # run from the folder; JS console prints here
 japp pack "Todo List" --output "Todo List.japp"
 ```
@@ -80,7 +88,7 @@ const username = await japp.storage.get("username");
 
 | Command | |
 |---|---|
-| `japp new <Name> [--id <id>]` | Create a starter app folder |
+| `japp new <Name> [--id <id>]` | Create a starter app folder (the template of *File › New App…*) |
 | `japp pack <folder> [--output App.japp]` | Validate and package (atomic) |
 | `japp unpack <App.japp> [folder]` | Extract safely |
 | `japp validate <App.japp\|folder>` | Report every error and warning |
@@ -132,7 +140,7 @@ const username = await japp.storage.get("username");
 | Open and modify source | ✅ Services item, menu, CLI; editor hand-off tested with Finder |
 | Save back into the `.japp` | ✅ validated, atomic, backed up (tested) |
 | Relaunch shows changes | ✅ tested (relaunch and in-place reload) |
-| New apps need no runtime rebuild | ✅ `japp new` / zip |
+| New apps need no runtime rebuild | ✅ *File › New App…*, `japp new` / zip |
 | Instructions for new apps | ✅ [CREATING_APPS.md](Docs/CREATING_APPS.md) |
 
 What was tested automatically, by hand, and what still needs a person at the

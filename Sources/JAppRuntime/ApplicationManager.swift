@@ -280,6 +280,40 @@ final class ApplicationManager {
         AppDelegate.shared?.refreshMenus()
     }
 
+    // MARK: New apps
+
+    /// *File › New App…*: writes a "Hello, World!" app named after the file to
+    /// `url` (the Save panel has already confirmed replacing a file there) and
+    /// opens its source for editing. Returns whether the app was created.
+    @discardableResult
+    func createApp(at url: URL) -> Bool {
+        let url = url.standardizedFileURL
+        do {
+            if session(for: url) != nil || isEditing(url) || InstanceRegistry.process(hosting: url) != nil {
+                throw JAppError.io("An app is open from this file. Quit it and close its Edit Source window, or choose another name.")
+            }
+            let manifest = try AppTemplate.createArchive(at: url)
+            Log.runtime.notice("created \(manifest.id, privacy: .public) at \(url.path, privacy: .public)")
+        } catch {
+            if RuntimeSettings.isAutomating {
+                Automation.reportFailure(url: url, error: error)
+                return false
+            }
+            ProcessIdentity.becomeRegularApp()
+            let alert = NSAlert()
+            alert.messageText = "“\(url.lastPathComponent)” can’t be created."
+            alert.informativeText = "\(error)"
+            alert.alertStyle = .warning
+            alert.runModal()
+            terminateIfIdle()
+            return false
+        }
+        if let package = try? JAppPackage.load(from: url) { IconManager.applyFinderIcon(for: package) }
+        NSDocumentController.shared.noteNewRecentDocumentURL(url)
+        editSource(url)
+        return true
+    }
+
     // MARK: Editing
 
     func isEditing(_ url: URL) -> Bool {

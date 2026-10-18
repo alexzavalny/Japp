@@ -6,8 +6,24 @@ editor and, optionally, the `japp` command that ships with JApp Runtime.
 
 ## The five-minute version
 
+Without Terminal: open JApp Runtime, choose **File › New App…** (⌘N), type a
+name and pick a folder. You get `<Name>.japp`, a "Hello, World!" app (a greeting,
+a text field and a button; the name is remembered with `japp.storage`), and its
+source opens in your code editor with the *Edit Source* window next to it.
+Change the files, click **Save & Run**, and the app runs. The app also contains
+an `AGENTS.md`: the rules, workflow and API summary below, written for AI coding
+agents (Codex, Cursor, Claude Code…), so you can open the folder in one and
+describe the app you want. It stays in the `.japp`, so whoever edits the app next
+has it too; delete it if you don't want it.
+
+The new app's id is `com.example.<name>`; if another app on this Mac already
+uses that id, a number is added (`com.example.notes-2`), because apps with the
+same id share their data. Change it in `manifest.json` before you share the app.
+
+With Terminal:
+
 ```sh
-japp new "Todo List"                     # creates ./Todo List/ with a working app
+japp new "Todo List"                     # creates ./Todo List/ with the same starter app
 japp run "Todo List" --console           # run it straight from the folder; JS console prints here
 # …edit the files, press ⌘R in the app window to reload…
 japp pack "Todo List" --output "Todo List.japp"
@@ -181,6 +197,10 @@ Examples: [Calculator](../Examples/Calculator) (hidden title bar) and
 native context menus).
 
 ## For AI coding assistants
+
+Apps made with *File › New App…* or `japp new` carry an `AGENTS.md` with a
+condensed version of this guide and of [API.md](API.md), including how to save an
+Edit Source folder back into its `.japp` (`../session.json` names the file).
 
 The format is designed to be produced in one pass. A checklist:
 
