@@ -285,6 +285,33 @@ check "a folder runs in developer mode" "$(json "$D" "d['native']['developer']")
 check "developer mode adds the Develop menu" "$(json "$D" "[m['items'][0] for m in d['native']['menuBar'] if m['title'] == 'Develop']")" "['Reload App']"
 check "developer mode: Inspect Element without ⌥" "$(json "$D" "[i['title'] for i in d['contextMenus'][0]['items']]")" "['Inspect Element']"
 
+echo "==> Paint (Windows 98)"
+"$JAPP" pack "$ROOT/Examples/Paint" --output "$WORK/Paint.japp" >/dev/null 2>&1
+native_run "$WORK/Paint.japp" "$WORK/paint" -JAppAutomationScript "$ROOT/Tests/E2E/paint.test.js" -JAppAutomationMenuChoice "Invert Colors"
+PT="$WORK/paint/report.json"
+paint() { json "$PT" "d['scriptResult']$1"; }
+check "pencil draws 1-pixel lines" "$(paint "['pencil']")" "['#000000', '#000000', '#000000', '#ffffff']"
+check "right button draws in the background colour" "$(paint "['rightButton']")" "#ff0000"
+check "rectangle outline" "$(paint "['rect']")" "['#000000', '#000000', '#000000', '#ffffff']"
+check "flood fill stays inside the outline" "$(paint "['fill']")" "['#0000ff', '#0000ff', '#ffffff']"
+check "undo and repeat" "$(json "$PT" "(d['scriptResult']['undo'], d['scriptResult']['redo'])")" "('#ffffff', '#0000ff')"
+check "ellipse with outline and fill" "$(paint "['ellipse']")" "['#00ff00', '#000000', '#ffffff']"
+check "Shift snaps a line to 0°" "$(paint "['line']")" "['#000000', '#000000', '#000000']"
+check "moving a selection leaves the background colour" "$(json "$PT" "(d['scriptResult']['selection'], d['scriptResult']['moved'])")" "([23, 18], ['#000000', '#ffffff'])"
+check "copy and paste float a selection" "$(paint "['pasted']")" "True"
+check "invert, flip and rotate the picture" "$(json "$PT" "(d['scriptResult']['invert'], d['scriptResult']['flip'], d['scriptResult']['rotate'], d['scriptResult']['sizeAfterUndo'])")" "('#000000', True, [480, 640], [640, 480])"
+check "canvas resize" "$(paint "['resize']")" "[300, 200]"
+check "text is drawn without anti-aliasing" "$(json "$PT" "(d['scriptResult']['text']['ink'], d['scriptResult']['text']['antialiased'])")" "(True, False)"
+check "24-bit BMP and PNG export" "$(json "$PT" "(d['scriptResult']['bmp'], d['scriptResult']['png'])")" "(['BM', 24, 640], True)"
+check "magnifier at 6x" "$(paint "['zoom']")" "3840px"
+check "Image menu is a native macOS menu with SF Symbols" "$(json "$PT" "(d['menus'][0]['items'][:3], d['menus'][0]['symbols'] >= 6)")" "(['Flip Horizontal', 'Flip Vertical', 'Rotate Right'], True)"
+check "choosing a native menu item runs it (Invert Colors)" "$(paint "['menuAction']")" "['#ffffff', '#000000']"
+check "toolbar buttons follow the selection" "$(json "$PT" "[b for b in d['scriptResult']['toolbar'] if 'off' in b]")" "['Cut (⌘X) (off)', 'Copy (⌘C) (off)']"
+check "document title in the toolbar and window" "$(paint "['title']")" "['untitled', 'untitled — Paint']"
+check "16 tools and 28 colours" "$(json "$PT" "(d['scriptResult']['tools'], d['scriptResult']['palette'])")" "(16, 28)"
+check "japp.window.zoom for the Maximize button" "$(paint "['windowZoom']")" "function"
+check "Paint: no console errors" "$(json "$PT" "[c for c in d['console'] if c['level'] == 'error']")" "[]"
+
 echo "==> Hostile and broken apps"
 $PY -c "
 import zipfile, sys

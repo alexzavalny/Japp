@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>untitled — Paint</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="toolbar" data-japp-drag-region>
+      <div class="doc-title">
+        <span class="doc-name" id="doc-name">untitled</span>
+        <span class="doc-meta" id="doc-meta">640 × 480</span>
+      </div>
+      <div class="toolbar-groups" id="toolbar"></div>
+    </header>
+
+    <div class="main">
+      <aside class="sidebar" id="toolbox" aria-label="Tools">
+        <div class="tools" id="tools" role="radiogroup" aria-label="Tools"></div>
+        <div class="options-title" id="options-title"></div>
+        <div class="options" id="options"></div>
+      </aside>
+
+      <div class="work">
+        <main class="workspace" id="workspace">
+          <div class="stage" id="stage">
+            <canvas id="image"></canvas>
+            <canvas id="overlay"></canvas>
+            <div class="grid" id="grid" hidden></div>
+            <svg class="marquee" id="marquee" hidden aria-hidden="true"><rect class="ants-light"/><rect class="ants"/></svg>
+            <div class="handle handle-r" data-handle="r" title="Drag to resize the canvas"></div>
+            <div class="handle handle-b" data-handle="b" title="Drag to resize the canvas"></div>
+            <div class="handle handle-rb" data-handle="rb" title="Drag to resize the canvas"></div>
+            <div class="resize-outline" id="resize-outline" hidden></div>
+          </div>
+        </main>
+        <div class="fontbar" id="fonts" hidden>
+          <select id="font-family" aria-label="Font">
+            <option>Helvetica Neue</option><option>Arial</option><option>Avenir Next</option><option>Georgia</option>
+            <option>Times New Roman</option><option>Courier New</option><option>Menlo</option><option>Comic Sans MS</option>
+            <option>Marker Felt</option><option>Chalkboard SE</option><option>Impact</option>
+          </select>
+          <select id="font-size" aria-label="Size">
+            <option>9</option><option>10</option><option>11</option><option>12</option><option>14</option><option>16</option>
+            <option>18</option><option>20</option><option selected>24</option><option>28</option><option>32</option>
+            <option>36</option><option>48</option><option>64</option><option>72</option><option>96</option>
+          </select>
+          <div class="seg">
+            <button type="button" id="font-bold" aria-pressed="false" title="Bold (⌘B)"><b>B</b></button>
+            <button type="button" id="font-italic" aria-pressed="false" title="Italic (⌘I)"><i>I</i></button>
+            <button type="button" id="font-underline" aria-pressed="false" title="Underline (⌘U)"><u>U</u></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="bottombar">
+      <div class="colors" id="colorbox" aria-label="Colors">
+        <div class="current" title="Click a color for the foreground, right-click for the background">
+          <button type="button" class="well secondary" id="current-secondary" aria-label="Background color"></button>
+          <button type="button" class="well primary" id="current-primary" aria-label="Foreground color"></button>
+          <button type="button" class="swap" id="swap-colors" title="Swap colors (X)" aria-label="Swap colors"></button>
+        </div>
+        <div class="palette" id="palette"></div>
+        <button type="button" class="picker" id="custom-color" title="Other color…" aria-label="Other color"></button>
+        <input type="color" id="color-input" class="color-input" tabindex="-1" aria-hidden="true">
+      </div>
+      <div class="status" id="statusbar">
+        <span class="stat" id="status-xy-wrap"><span class="stat-icon" data-icon="pointer"></span><span id="status-xy">—</span></span>
+        <span class="stat" id="status-size-wrap"><span class="stat-icon" data-icon="size"></span><span id="status-size">—</span></span>
+        <span class="stat"><span class="stat-icon" data-icon="canvas"></span><span id="status-canvas">640 × 480</span></span>
+        <div class="zoom">
+          <button type="button" class="zoom-step" id="zoom-out" aria-label="Zoom out" title="Zoom Out (⌘−)"></button>
+          <input type="range" id="zoom-slider" min="0" max="9" step="1" aria-label="Zoom">
+          <button type="button" class="zoom-step" id="zoom-in" aria-label="Zoom in" title="Zoom In (⌘+)"></button>
+          <button type="button" class="zoom-value" id="zoom-value" title="Zoom">100%</button>
+        </div>
+      </div>
+      <span class="status-help" id="status-help" hidden></span>
+    </footer>
+
+    <div class="menu-layer" id="menu-layer"></div>
+    <div class="sheet-layer" id="modal-layer" hidden></div>
+  </div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

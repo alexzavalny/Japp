@@ -212,6 +212,7 @@ struct WindowModule: BridgeModule {
         case "setTitle": session.window.title = try args.requiredString("title", maxLength: 200)
         case "close": session.window.performClose(nil)
         case "minimize": session.window.miniaturize(nil)
+        case "zoom": session.window.zoom(nil)
         case "setDragRegions":
             // Sent by the runtime's own page script (NativeFeel), not part of the public API.
             session.webView.setDragRegions(Self.rects(args["drag"]), excluding: Self.rects(args["exclude"]))
@@ -266,6 +267,35 @@ struct MenuModule: BridgeModule {
         return picker.selected
     }
 
+    /// "cmd+shift+z", "⌘⇧Z", "ctrl+pagedown" → an NSMenuItem key equivalent. Shown in the
+    /// menu (and usable while it is open); the page still handles the keys itself.
+    static func keyEquivalent(_ text: String) -> (String, NSEvent.ModifierFlags)? {
+        var modifiers: NSEvent.ModifierFlags = []
+        var rest = text.lowercased()
+        for (symbol, flag) in [("⌘", NSEvent.ModifierFlags.command), ("⇧", .shift), ("⌥", .option), ("⌃", .control)] where rest.contains(symbol) {
+            modifiers.insert(flag)
+            rest = rest.replacingOccurrences(of: symbol, with: "+")
+        }
+        var key: String?
+        for part in rest.split(separator: "+").map({ $0.trimmingCharacters(in: .whitespaces) }) where !part.isEmpty {
+            switch part {
+            case "cmd", "command": modifiers.insert(.command)
+            case "shift": modifiers.insert(.shift)
+            case "alt", "opt", "option": modifiers.insert(.option)
+            case "ctrl", "control": modifiers.insert(.control)
+            case "delete", "backspace": key = "\u{8}"
+            case "del", "forwarddelete": key = String(UnicodeScalar(NSDeleteFunctionKey)!)
+            case "esc", "escape": key = "\u{1b}"
+            case "return", "enter": key = "\r"
+            case "pageup": key = String(UnicodeScalar(NSPageUpFunctionKey)!)
+            case "pagedown": key = String(UnicodeScalar(NSPageDownFunctionKey)!)
+            default: key = part.count == 1 ? part : nil
+            }
+        }
+        guard let key, key.count == 1 else { return nil }
+        return (key, modifiers)
+    }
+
     private static func build(_ list: [Any], depth: Int, count: inout Int, picker: MenuPicker) throws -> NSMenu {
         let menu = NSMenu()
         menu.autoenablesItems = false
@@ -289,6 +319,10 @@ struct MenuModule: BridgeModule {
             item.state = spec.bool("checked") == true ? .on : .off
             if let symbol = spec.string("symbol"), let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil) {
                 item.image = image
+            }
+            if let shortcut = spec.string("shortcut"), let (key, modifiers) = Self.keyEquivalent(shortcut) {
+                item.keyEquivalent = key
+                item.keyEquivalentModifierMask = modifiers
             }
             if let children = spec["submenu"] as? [Any] {
                 guard depth < maxDepth else { throw BridgeError.badArguments("Menus may be nested at most \(maxDepth) levels deep.") }

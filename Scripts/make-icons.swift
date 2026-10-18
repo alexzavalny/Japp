@@ -1,11 +1,13 @@
 #!/usr/bin/env swift
 // Draws the project's icons with AppKit so they can be regenerated without design tools:
 //
-//   swift Scripts/make-icons.swift
+//   swift Scripts/make-icons.swift            all icons
+//   swift Scripts/make-icons.swift paint      only the named ones (calculator, chess, paint, runtime, document)
 //
 // Outputs:
 //   Examples/Calculator/assets/icon.png   1024×1024 Calculator app icon
 //   Examples/ChessResults/assets/icon.png 1024×1024 Chess Results app icon
+//   Examples/Paint/assets/icon.png        1024×1024 Paint app icon
 //   Resources/AppIcon.icns                JApp Runtime application icon
 //   Resources/JAppDocument.icns           generic .japp document icon
 import AppKit
@@ -241,8 +243,87 @@ func drawChessResults(_ scale: CGFloat) {
     }
 }
 
-writePNG(render(size: 1024, drawCalculator), to: root.appendingPathComponent("Examples/Calculator/assets/icon.png"))
-writePNG(render(size: 1024, drawChessResults), to: root.appendingPathComponent("Examples/ChessResults/assets/icon.png"))
-writePNG(render(size: 1024, drawRuntime), to: root.appendingPathComponent("Resources/AppIcon.png"))
-writeICNS(name: "AppIcon", drawRuntime)
-writeICNS(name: "JAppDocument", drawDocument)
+// MARK: Paint
+
+/// A tilted white canvas with a rainbow, a brush, and three pixels as a nod to 1998,
+/// on a warm gradient.
+func drawPaint(_ scale: CGFloat) {
+    let body = iconBody(fill: NSGradient(starting: color(0xFF9A3D), ending: color(0xE0356F))!)
+    NSGraphicsContext.saveGraphicsState()
+    body.addClip()
+    let context = NSGraphicsContext.current!.cgContext
+
+    // The canvas card, slightly turned, with a soft shadow.
+    context.saveGState()
+    context.translateBy(x: 512, y: 540)
+    context.rotate(by: -0.10)
+    let card = NSRect(x: -300, y: -230, width: 600, height: 460)
+    NSGraphicsContext.saveGraphicsState()
+    let shadow = NSShadow()
+    shadow.shadowColor = NSColor.black.withAlphaComponent(0.28)
+    shadow.shadowOffset = NSSize(width: 0, height: -18)
+    shadow.shadowBlurRadius = 36
+    shadow.set()
+    color(0xFFFFFF).setFill()
+    NSBezierPath(roundedRect: card, xRadius: 54, yRadius: 54).fill()
+    NSGraphicsContext.restoreGraphicsState()
+    // The rainbow.
+    for (index, hex) in [UInt32(0xFF3B30), 0xFF9500, 0xFFCC00, 0x34C759, 0x0A84FF, 0x5E5CE6].enumerated() {
+        let radius = 230 - CGFloat(index) * 30
+        let arc = NSBezierPath()
+        arc.appendArc(withCenter: NSPoint(x: 0, y: -150), radius: radius, startAngle: 180, endAngle: 0, clockwise: true)
+        arc.lineWidth = 30
+        color(hex).setStroke()
+        arc.stroke()
+    }
+    // Three pixels, stepping up to the right.
+    color(0x1C1C1E).setFill()
+    for index in 0..<3 {
+        NSRect(x: -250 + CGFloat(index) * 34, y: 82 + CGFloat(index) * 34, width: 30, height: 30).fill()
+    }
+    context.restoreGState()
+
+    // The brush, lying across the corner.
+    context.saveGState()
+    context.translateBy(x: 690, y: 330)
+    context.rotate(by: 0.80)
+    NSGraphicsContext.saveGraphicsState()
+    let brushShadow = NSShadow()
+    brushShadow.shadowColor = NSColor.black.withAlphaComponent(0.3)
+    brushShadow.shadowOffset = NSSize(width: 8, height: -10)
+    brushShadow.shadowBlurRadius = 18
+    brushShadow.set()
+    NSGradient(starting: color(0x8B5A2B), ending: color(0x5C3A1A))!
+        .draw(in: NSBezierPath(roundedRect: NSRect(x: -36, y: -340, width: 72, height: 330), xRadius: 36, yRadius: 36), angle: 0)
+    NSGraphicsContext.restoreGraphicsState()
+    NSGradient(starting: color(0xF2F2F7), ending: color(0xA1A1AA))!
+        .draw(in: NSBezierPath(roundedRect: NSRect(x: -42, y: -30, width: 84, height: 96), xRadius: 14, yRadius: 14), angle: 0)
+    let bristles = NSBezierPath()
+    bristles.move(to: NSPoint(x: -40, y: 60))
+    bristles.curve(to: NSPoint(x: 0, y: 190), controlPoint1: NSPoint(x: -46, y: 120), controlPoint2: NSPoint(x: -20, y: 170))
+    bristles.curve(to: NSPoint(x: 40, y: 60), controlPoint1: NSPoint(x: 20, y: 170), controlPoint2: NSPoint(x: 46, y: 120))
+    bristles.close()
+    color(0x2C2C2E).setFill()
+    bristles.fill()
+    let tip = NSBezierPath()
+    tip.move(to: NSPoint(x: -26, y: 128))
+    tip.curve(to: NSPoint(x: 0, y: 190), controlPoint1: NSPoint(x: -22, y: 160), controlPoint2: NSPoint(x: -10, y: 180))
+    tip.curve(to: NSPoint(x: 26, y: 128), controlPoint1: NSPoint(x: 10, y: 180), controlPoint2: NSPoint(x: 22, y: 160))
+    tip.close()
+    color(0x0A84FF).setFill()
+    tip.fill()
+    context.restoreGState()
+    NSGraphicsContext.restoreGraphicsState()
+}
+
+let only = Set(CommandLine.arguments.dropFirst().map { $0.lowercased() })
+func wanted(_ name: String) -> Bool { only.isEmpty || only.contains(name) }
+
+if wanted("calculator") { writePNG(render(size: 1024, drawCalculator), to: root.appendingPathComponent("Examples/Calculator/assets/icon.png")) }
+if wanted("chess") { writePNG(render(size: 1024, drawChessResults), to: root.appendingPathComponent("Examples/ChessResults/assets/icon.png")) }
+if wanted("paint") { writePNG(render(size: 1024, drawPaint), to: root.appendingPathComponent("Examples/Paint/assets/icon.png")) }
+if wanted("runtime") {
+    writePNG(render(size: 1024, drawRuntime), to: root.appendingPathComponent("Resources/AppIcon.png"))
+    writeICNS(name: "AppIcon", drawRuntime)
+}
+if wanted("document") { writeICNS(name: "JAppDocument", drawDocument) }

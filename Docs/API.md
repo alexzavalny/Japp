@@ -203,6 +203,7 @@ row.addEventListener("contextmenu", async (event) => {
 | `id` | Returned when chosen (default: the label). |
 | `enabled`, `checked` | Default `true` and `false`. |
 | `symbol` | An SF Symbols name, e.g. `"star"`, `"trash"`, `"safari"`. |
+| `shortcut` | Shown on the right, e.g. `"cmd+z"`, `"cmd+shift+z"`, `"⌘⌥I"`, `"ctrl+pagedown"`, `"delete"`. Only for display (and while the menu is open): the page still handles the keys. |
 | `submenu` | An array of items (up to 4 levels). |
 
 `"-"` or `{ type: "separator" }` is a separator; a menu holds at most 300 items.
@@ -214,6 +215,7 @@ Controls the app's own window.
 ```js
 await japp.window.setTitle("Untitled — My Editor");
 await japp.window.minimize();
+await japp.window.zoom();      // like double-clicking the title bar (zoom / restore)
 await japp.window.close();     // closes the window; the app quits
 ```
 

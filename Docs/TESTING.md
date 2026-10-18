@@ -5,7 +5,7 @@
 ```sh
 swift test                 # 59 unit tests (JAppKit), no GUI needed
 Scripts/build.sh && Scripts/install.sh
-Scripts/e2e-test.sh        # 91 end-to-end checks against the installed runtime (windows flash briefly)
+Scripts/e2e-test.sh        # 112 end-to-end checks against the installed runtime (windows flash briefly)
 ```
 
 **Unit tests** (`Tests/JAppKitTests`) cover the ZIP reader/writer (round trips;
@@ -28,6 +28,12 @@ check, on the real installed app:
 * Launch Services maps `.japp` → `dev.japp.app` → JApp Runtime;
 * `open Calculator.japp` (what a Finder double-click does) shows a window titled
   "Calculator" at 400×550 and gives the file its Finder icon;
+* Paint (Tests/E2E/paint.test.js, synthetic pointer events, pixels read back):
+  pencil, right-button colour, rectangle, flood fill, undo/redo, ellipse fill,
+  Shift-snapped line, moving a selection, copy/paste, invert/flip/rotate/resize,
+  aliased text, BMP and PNG encoding, 6× zoom, the Image toolbar menu as a native
+  NSMenu with SF Symbols whose chosen item (Invert Colors) runs, toolbar state, titles,
+  `japp.window.zoom`;
 * app bundles: the app runs as `dev.japp.app.com.example.calculator` from
   `AppBundles/…/Calculator.app`, process and bundle named "Calculator", app menu
   names only the app, no runtime commands; JApp Runtime quits after the hand-over;
@@ -112,6 +118,7 @@ which the automated environment could not do:
 | `japp.dialog.openFile` / `saveFile` / `message`, `alert`/`confirm`/`prompt`, `<input type=file>`, downloads | Need clicks in panels. Permission enforcement for dialogs is tested. |
 | `japp.notification.show` | Triggers the macOS permission prompt, now per app (System Settings › Notifications lists the app by name). |
 | `japp.clipboard` with permission | Not run, to avoid overwriting the clipboard. |
+| Paint with a real mouse and keyboard | Tools are tested with synthetic pointer events; real right-drags, the tool cursors, ⌘Z/⌘C/⌘V/⌘S and single-key tool shortcuts through WebKit, Open/Save panels, the system colour picker and dropping a file need a person. Dark mode was not rendered. |
 | Quarantine prompt buttons (Open / Show Source…) | Detection is tested; the alert needs a click. |
 | *Open Calculator Example*, *Install Command-Line Tool…* menu items | Simple file operations; not clicked. |
 | Dragging the window by a drag region; double-click to zoom | Hit-testing is tested; `performDrag(with:)` needs a physical mouse. |

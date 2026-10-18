@@ -39,6 +39,11 @@ Then try the full loop:
   search, standings, player results, player index, followed players with notifications.
   Uses `japp.http.fetch`, ES modules and a hash router; no build step. Styled as a Mac
   app: translucent sidebar, unified toolbar, native context menus.
+* **[Paint](Examples/Paint)** — the tool set of Windows 98 Paint in a present-day Mac window:
+  all sixteen tools (free-form select, eraser and colour eraser, flood fill, airbrush, curves,
+  polygons…), the 28-colour box, flip/rotate, stretch/skew, canvas size, zoom with pixel grid,
+  undo, and PNG/BMP/JPEG files through `japp.dialog`. Menus are real macOS menus
+  (`japp.menu.popup` with SF Symbols and shortcuts); pixels are still drawn without anti-aliasing.
 
 `Scripts/build.sh` packs every folder in `Examples/` into `build/<Name>.japp`.
 

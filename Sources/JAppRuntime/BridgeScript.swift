@@ -123,6 +123,7 @@ enum BridgeScript {
         setTitle: (title) => call("window", "setTitle", { title: String(title) }).then(done),
         close: () => call("window", "close").then(done),
         minimize: () => call("window", "minimize").then(done),
+        zoom: () => call("window", "zoom").then(done),
       });
 
       const japp = Object.freeze({
