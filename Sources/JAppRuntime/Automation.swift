@@ -17,8 +17,67 @@ import JAppKit
 /// `JAppAutomationQuit` makes the runtime quit when done.
 @MainActor
 enum Automation {
+    /// Finishing a snapshot is test-process cleanup, not a user quitting an app.
+    private(set) static var isFinishing = false
+
+    private static func finishIfRequested() {
+        guard RuntimeSettings.automationQuits else { return }
+        isFinishing = true
+        NSApp.terminate(nil)
+    }
     /// Object: "save", "saveAndRun" or "close" — acts on open Edit Source windows.
     static let editorActionNotification = Notification.Name("dev.japp.runtime.automation.editor")
+
+    /// Native user actions for lifecycle regression tests. Observed only in automation mode.
+    static let appActionNotification = Notification.Name("dev.japp.runtime.automation.app")
+    private static weak var activeAlert: NSAlert?
+    private static weak var activeFilePanel: NSSavePanel?
+
+    static func performAppAction(_ action: String) {
+        guard RuntimeSettings.isAutomating else { return }
+        let manager = ApplicationManager.shared
+        switch action {
+        case "close": manager.keySession?.window.performClose(nil)
+        case "quit":
+            // A menu action runs from the event loop. Do the same here: entering
+            // terminateLater inside a main-queue notification blocks Swift tasks.
+            RunLoop.main.perform { MainActor.assumeIsolated { NSApp.terminate(nil) } }
+        case "reload": if let session = manager.keySession { manager.runUpdated(session.url) }
+        case "cancelFilePanel": activeFilePanel?.cancel(nil)
+        default:
+            if action.hasPrefix("alert:") {
+                activeAlert?.buttons.first { $0.title == String(action.dropFirst(6)) }?.performClick(nil)
+            }
+        }
+    }
+
+    static func alertDidOpen(_ alert: NSAlert) {
+        activeAlert = alert
+        if let directory = RuntimeSettings.automationDirectory {
+            write(["title": alert.messageText, "buttons": alert.buttons.map(\.title)], to: directory, name: "alert.json")
+        }
+    }
+
+    static func alertDidClose(_ alert: NSAlert) {
+        if activeAlert === alert { activeAlert = nil; removeReport("alert.json") }
+    }
+
+    static func filePanelDidOpen(_ panel: NSSavePanel) {
+        activeFilePanel = panel
+        if let directory = RuntimeSettings.automationDirectory {
+            write(["name": panel.nameFieldStringValue], to: directory, name: "file-panel.json")
+        }
+    }
+
+    static func filePanelDidClose(_ panel: NSSavePanel) {
+        if activeFilePanel === panel { activeFilePanel = nil; removeReport("file-panel.json") }
+    }
+
+    private static func removeReport(_ name: String) {
+        if let directory = RuntimeSettings.automationDirectory {
+            try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))
+        }
+    }
 
     /// Writes `edit-report.json`: where the source lives and what changed.
     static func reportEditSession(_ workspace: SourceWorkspace, status: String) {
@@ -120,7 +179,7 @@ enum Automation {
             // How Finder, ⌘-Tab and notifications draw this process's bundle.
             writePNG(NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath), to: directory.appendingPathComponent("bundle-icon.png"))
             write(report, to: directory)
-            if RuntimeSettings.automationQuits { NSApp.terminate(nil) }
+            finishIfRequested()
         }
     }
 
@@ -162,6 +221,7 @@ enum Automation {
         }
         return [
             "developer": session.isDeveloperMode,
+            "documentEdited": session.window.isDocumentEdited,
             "titlebarHeight": state.titlebarHeight,
             "titlebarInset": state.titlebarInset,
             "fullSizeContent": session.window.styleMask.contains(.fullSizeContentView),
@@ -237,7 +297,7 @@ enum Automation {
         guard let directory = RuntimeSettings.automationDirectory else { return }
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         write(["ok": false, "file": url.path, "error": "\(error)"], to: directory)
-        if RuntimeSettings.automationQuits { NSApp.terminate(nil) }
+        finishIfRequested()
     }
 
     private static func snapshot(of webView: WKWebView) async -> NSImage? {
@@ -246,9 +306,9 @@ enum Automation {
         }
     }
 
-    private static func write(_ report: [String: Any], to directory: URL) {
+    private static func write(_ report: [String: Any], to directory: URL, name: String = "report.json") {
         guard let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) else { return }
-        try? data.write(to: directory.appendingPathComponent("report.json"), options: .atomic)
+        try? data.write(to: directory.appendingPathComponent(name), options: .atomic)
     }
 
     private static func writePNG(_ image: NSImage, to url: URL) {

@@ -30,6 +30,7 @@ final class ApplicationManager {
     var developMode = false
     /// Apps being started in other processes; the runtime must not quit before they are.
     private var pendingLaunches = 0
+    private var pendingReloads: Set<ObjectIdentifier> = []
 
     /// JApp Runtime starts apps through their app bundles. Not when streaming the
     /// console to a terminal (the app must run in this process for that), and not
@@ -238,11 +239,7 @@ final class ApplicationManager {
         let url = url.standardizedFileURL
         Log.runtime.notice("run updated \(url.path, privacy: .public)")
         if let session = session(for: url) {
-            if session.reload() {
-                session.bringToFront()
-            } else {
-                replace(session)
-            }
+            reloadAfterApproval(session)
             return
         }
         if spansProcesses, let pid = InstanceRegistry.process(hosting: url) {
@@ -257,11 +254,32 @@ final class ApplicationManager {
     func handleRemoteRequest(_ name: Notification.Name, path: String) {
         guard let session = session(for: URL(fileURLWithPath: path)) else { return }
         Log.runtime.notice("\(name.rawValue, privacy: .public) request for \(path, privacy: .public)")
-        if name == .jappReloadApp, !session.reload() {
-            replace(session)
+        if name == .jappReloadApp {
+            reloadAfterApproval(session)
             return
         }
         session.bringToFront()
+    }
+
+    private func reloadAfterApproval(_ session: AppSession) {
+        let id = ObjectIdentifier(session)
+        guard pendingReloads.insert(id).inserted else { return }
+        Task {
+            defer { pendingReloads.remove(id) }
+            guard await session.confirmDiscard(reason: .reload), sessions.contains(where: { $0 === session }) else { return }
+            if session.reload() { session.bringToFront() } else { replace(session) }
+        }
+    }
+
+    func confirmTermination() async -> Bool {
+        // Approve every session before quitting any of them. Cancelling one
+        // leaves the other windows and their unsaved contents intact.
+        var checked: Set<ObjectIdentifier> = []
+        while let session = sessions.first(where: { !checked.contains(ObjectIdentifier($0)) }) {
+            guard await session.confirmDiscard(reason: .quit) else { return false }
+            checked.insert(ObjectIdentifier(session))
+        }
+        return true
     }
 
     /// Swaps a running app for a fresh session (its id changed, so its data store must too).
@@ -270,7 +288,7 @@ final class ApplicationManager {
         sessions.removeAll { $0 === session }
         session.onClose = nil
         launch(session.url)
-        session.close()
+        session.closeAfterApproval()
     }
 
     private func sessionDidClose(_ session: AppSession) {

@@ -23,6 +23,9 @@ final class AppSession: NSObject {
     private let launchedForDevelopment: Bool
     private var hasShownWindow = false
     private var hasReportedLoad = false
+    private var isClosed = false
+    private var pendingDocumentDecision: Task<Bool, Never>?
+    private var pendingWindowClose: Task<Void, Never>?
     private(set) var consoleMessages: [[String: String]] = []
 
     var onClose: ((AppSession) -> Void)?
@@ -151,6 +154,7 @@ final class AppSession: NSObject {
         IconManager.showInDock(icon)
         IconManager.applyFinderIcon(for: fresh)
         hasReportedLoad = false
+        window.isDocumentEdited = false
         webView.load(URLRequest(url: schemeHandler.entryURL))
         AppDelegate.shared?.refreshMenus()
         return true
@@ -160,7 +164,53 @@ final class AppSession: NSObject {
         window.performClose(nil)
     }
 
+    /// Used only after the caller has obtained approval (for example, replacing
+    /// a session after an identity-changing reload).
+    func closeAfterApproval() {
+        window.close()
+    }
+
+    enum CloseReason: String { case close, quit, reload }
+
+    /// Coalesce repeated close/quit requests while a save or sheet is in progress.
+    func confirmDiscard(reason: CloseReason) async -> Bool {
+        if isClosed { return true }
+        if let pendingDocumentDecision { return await pendingDocumentDecision.value }
+        let decision = Task { await self.checkDocumentDecision(reason: reason) }
+        pendingDocumentDecision = decision
+        let allowed = await decision.value
+        pendingDocumentDecision = nil
+        return allowed
+    }
+
+    private func checkDocumentDecision(reason: CloseReason) async -> Bool {
+        do {
+            let result = try await webView.callAsyncJavaScript(BridgeScript.closeDecision,
+                arguments: ["reason": reason.rawValue], in: nil, contentWorld: .page)
+            guard let decision = result as? [String: Any], let allowed = decision["allowed"] as? Bool else {
+                throw BridgeError.failed("The app did not return a close decision.")
+            }
+            if decision["handled"] as? Bool == true { return allowed }
+            if !window.isDocumentEdited { return true }
+        } catch {
+            recordConsole(level: "error", message: "Could not check unsaved changes: \(error.localizedDescription)")
+            // An unavailable page or a failed save must never silently discard work.
+        }
+
+        let alert = NSAlert()
+        alert.messageText = "Keep “\(window.title)” open?"
+        let action = reason == .reload ? "reload the app" : (reason == .quit ? "quit" : "close the window")
+        alert.informativeText = "Your changes may not be saved. Keep the window open to save them, or discard them and \(action)."
+        alert.alertStyle = .warning
+        alert.icon = icon
+        alert.addButton(withTitle: "Keep Open")
+        alert.addButton(withTitle: "Discard Changes")
+        alert.buttons[1].hasDestructiveAction = true
+        return await runAlert(alert) == .alertSecondButtonReturn
+    }
+
     private func tearDown() {
+        isClosed = true
         let controller = webView.configuration.userContentController
         controller.removeAllScriptMessageHandlers()
         controller.removeAllUserScripts()
@@ -185,15 +235,19 @@ final class AppSession: NSObject {
 
     func runSheet(_ panel: NSSavePanel) async -> NSApplication.ModalResponse {
         showWindow()
+        defer { if RuntimeSettings.isAutomating { Automation.filePanelDidClose(panel) } }
         return await withCheckedContinuation { continuation in
             panel.beginSheetModal(for: window) { continuation.resume(returning: $0) }
+            if RuntimeSettings.isAutomating { Automation.filePanelDidOpen(panel) }
         }
     }
 
     func runAlert(_ alert: NSAlert) async -> NSApplication.ModalResponse {
         showWindow()
+        defer { if RuntimeSettings.isAutomating { Automation.alertDidClose(alert) } }
         return await withCheckedContinuation { continuation in
             alert.beginSheetModal(for: window) { continuation.resume(returning: $0) }
+            if RuntimeSettings.isAutomating { Automation.alertDidOpen(alert) }
         }
     }
 }
@@ -201,6 +255,15 @@ final class AppSession: NSObject {
 // MARK: - Window
 
 extension AppSession: NSWindowDelegate {
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        guard pendingWindowClose == nil else { return false }
+        pendingWindowClose = Task {
+            if await confirmDiscard(reason: .close), !isClosed { closeAfterApproval() }
+            pendingWindowClose = nil
+        }
+        return false
+    }
+
     func windowWillClose(_ notification: Notification) {
         tearDown()
     }

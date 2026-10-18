@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     private var hasOpenedSomething = false
     private var welcome: WelcomeWindowController?
     private var terminationSource: DispatchSourceSignal?
+    private var terminationPending = false
 
     private var isBundled: Bool { Bundle.main.bundleURL.pathExtension == "app" && Bundle.main.bundleIdentifier != nil }
     static let jappType = UTType(JAppVersion.uniformTypeIdentifier) ?? UTType(filenameExtension: JAppVersion.fileExtension) ?? .data
@@ -33,10 +34,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         // `kill`, logout and `pkill` send SIGTERM: quit normally so bookkeeping is cleaned up.
         signal(SIGTERM, SIG_IGN)
         terminationSource = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
-        terminationSource?.setEventHandler { NSApp.terminate(nil) }
+        terminationSource?.setEventHandler {
+            // terminateLater starts a modal loop; leave the dispatch callback
+            // first so asynchronous save decisions can use the main queue.
+            RunLoop.main.perform { MainActor.assumeIsolated { NSApp.terminate(nil) } }
+        }
         terminationSource?.resume()
         if RuntimeSettings.isAutomating {
             distributed.addObserver(self, selector: #selector(automationRequest(_:)), name: Automation.editorActionNotification,
+                                    object: nil, suspensionBehavior: .deliverImmediately)
+            distributed.addObserver(self, selector: #selector(automationAppRequest(_:)), name: Automation.appActionNotification,
                                     object: nil, suspensionBehavior: .deliverImmediately)
         }
         if ProcessIdentity.startsHidden {
@@ -50,6 +57,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     @objc private func automationRequest(_ notification: Notification) {
         guard let action = notification.object as? String else { return }
         manager.performEditorAction(action)
+    }
+
+    @objc private func automationAppRequest(_ notification: Notification) {
+        guard let action = notification.object as? String else { return }
+        Automation.performAppAction(action)
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -92,6 +104,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if Automation.isFinishing || manager.sessions.isEmpty { return .terminateNow }
+        guard !terminationPending else { return .terminateLater }
+        terminationPending = true
+        Task {
+            let allowed = await manager.confirmTermination()
+            terminationPending = false
+            sender.reply(toApplicationShouldTerminate: allowed)
+        }
+        return .terminateLater
+    }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag && manager.sessions.isEmpty {

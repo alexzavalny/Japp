@@ -310,7 +310,7 @@ func cmdSave(_ raw: [String]) throws {
         if InstanceRegistry.process(hosting: target) != nil {
             DistributedNotificationCenter.default().postNotificationName(RuntimeNotification.reload, object: target.path,
                                                                          userInfo: nil, deliverImmediately: true)
-            print("Reloaded the running app")
+            print("Requested reload of the running app")
         } else {
             try cmdRun([target.path])
         }

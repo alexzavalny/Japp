@@ -34,7 +34,8 @@ enforced today and what is not.
 **Web view**
 * Each app runs at its own origin `japp-resource://<id>/`; the scheme handler only
   serves that app's files and only `GET`/`HEAD`.
-* A `Content-Security-Policy` header is sent with every page. Without `network`:
+* A `Content-Security-Policy` header is sent with every resource response,
+  including SVG documents, worker scripts and range responses. Without `network`:
   `default-src 'self' japp-resource: data: blob:` (and the same for scripts, styles,
   images, fonts, media, connections, frames, workers), `object-src 'none'`,
   `base-uri 'self'`, `form-action 'self'`. Inline scripts and `eval` stay allowed

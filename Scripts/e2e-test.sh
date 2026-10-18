@@ -381,6 +381,13 @@ xattr -w com.apple.quarantine "0081;00000000;Safari;" "$WORK/Downloaded.japp"
 "$JAPP" snapshot "$WORK/Downloaded.japp" --output "$WORK/quarantine.png" > "$WORK/quarantine.json" 2>/dev/null
 check "downloaded (quarantined) app needs confirmation" "$(json "$WORK/quarantine.json" "'quarantined' in d.get('error', '')")" "True"
 
+echo "==> Network policy and unsaved documents"
+if JAPP_RUNTIME="$APP/Contents/MacOS/JAppRuntime" /usr/bin/python3 "$ROOT/Scripts/runtime-regression-test.py"; then
+    pass "network and unsaved-document regressions"
+else
+    fail "network and unsaved-document regressions"
+fi
+
 echo
 echo "$PASS passed, $FAIL failed. Artifacts: $WORK"
 [ "$FAIL" -eq 0 ]

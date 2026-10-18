@@ -210,7 +210,12 @@ struct WindowModule: BridgeModule {
     func handle(_ method: String, args: [String: Any], session: AppSession) async throws -> Any? {
         switch method {
         case "setTitle": session.window.title = try args.requiredString("title", maxLength: 200)
-        case "close": session.window.performClose(nil)
+        case "setDocumentEdited":
+            guard let edited = args["edited"] as? NSNumber, CFGetTypeID(edited) == CFBooleanGetTypeID() else {
+                throw BridgeError.badArguments("“edited” must be true or false.")
+            }
+            session.window.isDocumentEdited = edited.boolValue
+        case "close": session.close()
         case "minimize": session.window.miniaturize(nil)
         case "zoom": session.window.zoom(nil)
         case "setDragRegions":

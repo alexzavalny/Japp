@@ -1,7 +1,7 @@
 # JavaScript API (`window.japp`)
 
 JApp Runtime injects `window.japp` into every app before the app's own scripts
-run. It is a frozen object; every method returns a **Promise**.
+run. It is a frozen object; native operations return a **Promise**.
 
 ```js
 await japp.storage.set("username", "Alex");
@@ -216,8 +216,44 @@ Controls the app's own window.
 await japp.window.setTitle("Untitled — My Editor");
 await japp.window.minimize();
 await japp.window.zoom();      // like double-clicking the title bar (zoom / restore)
-await japp.window.close();     // closes the window; the app quits
+await japp.window.close();     // requests closing; unsaved-work protection can cancel it
 ```
+
+### Protecting unsaved work
+
+Mark documents as edited whenever their contents change, and clear the flag only
+after a successful save. This also updates the window's native edited indicator.
+
+```js
+await japp.window.setDocumentEdited(true);
+
+const removeHandler = japp.window.onBeforeClose(async ({ reason }) => {
+  // reason is "close", "quit" or "reload" (including Save & Run).
+  if (!dirty) return true;
+  const choice = await japp.dialog.message({
+    message: "Save your changes?", buttons: ["Save", "Don’t Save", "Cancel"],
+  });
+  if (choice === 2) return false;
+  if (choice === 0) {
+    const saved = await saveDocument(); // false if the user cancels the Save panel
+    if (!saved) return false;
+    dirty = false;
+    await japp.window.setDocumentEdited(false);
+  }
+  return true;
+});
+```
+
+The close button, ⌘W, `japp.window.close()`, ⌘Q and reload all wait for the
+handler. Return **`true`** to proceed; any other result cancels. Multiple handlers
+must all approve. Registration is synchronous and returns an unsubscribe function
+(`removeHandler()`); handlers must not call `close()` themselves.
+
+Repeated requests share the pending decision. A failed handler opens a native
+warning instead of silently losing work. An edited document with no handler gets
+the same warning, offering **Keep Open** or **Discard Changes**. Apps must opt in
+by marking their edited state or registering a handler; this does not provide
+recovery after crashes or Force Quit. Paint uses this API for Save / Don’t Save / Cancel.
 
 ## Native look and feel
 

@@ -3,7 +3,7 @@ import JAppKit
 
 /// JavaScript injected at document start into every app's main frame.
 ///
-/// It defines `window.japp`, a frozen object whose methods return Promises.
+/// It defines `window.japp`, a frozen object whose native operations return Promises.
 /// Each call is serialised to JSON and posted to the native `japp` message
 /// handler, which replies with a JSON envelope `{ok, value}` or `{ok, error}`.
 /// The script holds no authority of its own: every permission check happens in Swift.
@@ -121,6 +121,16 @@ enum BridgeScript {
 
       const appWindow = Object.freeze({
         setTitle: (title) => call("window", "setTitle", { title: String(title) }).then(done),
+        setDocumentEdited: (edited) => call("window", "setDocumentEdited", { edited }).then(done),
+        onBeforeClose(handler) {
+          if (typeof handler !== "function") throw new TypeError("onBeforeClose needs a function");
+          const listener = (event) => {
+            // A rejected handler must keep the window open, including synchronous errors.
+            event.waitUntil(Promise.resolve().then(() => handler({ reason: event.detail.reason })));
+          };
+          window.addEventListener("jappbeforeclose", listener);
+          return () => window.removeEventListener("jappbeforeclose", listener);
+        },
         close: () => call("window", "close").then(done),
         minimize: () => call("window", "minimize").then(done),
         zoom: () => call("window", "zoom").then(done),
@@ -142,6 +152,18 @@ enum BridgeScript {
 
       Object.defineProperty(window, "japp", { value: japp, enumerable: true, configurable: false, writable: false });
     })();
+    """#
+
+    /// Runs in the page so an app can finish an asynchronous save before native
+    /// close, quit or reload proceeds. Only explicit `true` approves a handler.
+    static let closeDecision = #"""
+    const decisions = [];
+    const event = new CustomEvent("jappbeforeclose", { cancelable: true, detail: { reason } });
+    event.waitUntil = (decision) => decisions.push(Promise.resolve(decision));
+    window.dispatchEvent(event);
+    const results = await Promise.all(decisions);
+    return { handled: decisions.length > 0 || event.defaultPrevented,
+             allowed: !event.defaultPrevented && results.every((result) => result === true) };
     """#
 
     /// Forwards `console.*` output and uncaught errors to the runtime

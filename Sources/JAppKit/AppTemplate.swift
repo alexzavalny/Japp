@@ -257,6 +257,10 @@ public enum AppTemplate {
         5. **Store data with `japp.storage`**, never in the app's files (they are read-only
            while the app runs).
         6. **Windows resize**: lay out with flexbox or grid, not fixed pixel positions.
+        7. **Protect unsaved documents.** Call `japp.window.setDocumentEdited(true)` on edits
+           and clear it after saving. Register `japp.window.onBeforeClose(async ({ reason }) => ...)`
+           to offer Save / Don’t Save / Cancel for close, quit and reload; return `true` only
+           when it is safe to proceed. A cancelled or failed save must keep the app open.
 
         ## manifest.json
 
@@ -270,7 +274,8 @@ public enum AppTemplate {
 
         ## The `window.japp` API
 
-        Every method returns a Promise; failures reject with an error that has a `code`.
+        Native operations return Promises; failures reject with an error that has a `code`.
+        `onBeforeClose(handler)` is synchronous and returns a function that removes the handler.
 
         | Call | Permission |
         |---|---|
@@ -283,6 +288,7 @@ public enum AppTemplate {
         | `japp.http.fetch(url, { method, headers, body, timeout })` → `{ ok, status, headers, json(), text() }`; like `fetch()` but never blocked by CORS | `network` |
         | `japp.menu.popup([{ id, label, symbol, shortcut, enabled, checked, submenu }, "-"], { x, y })` → id of the chosen item or `null`; a native menu (`symbol` is an SF Symbols name) | none |
         | `japp.window.setTitle(title)`, `.minimize()`, `.zoom()`, `.close()` | none |
+        | `japp.window.setDocumentEdited(boolean)`, `.onBeforeClose(handler)` | none |
 
         Also: `japp.app.id`, `.name`, `.version`, `.permissions`, `japp.hasPermission(name)`,
         `japp.runtimeVersion`. The usual web platform works too: `alert`/`confirm`/`prompt`

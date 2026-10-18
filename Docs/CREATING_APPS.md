@@ -151,6 +151,10 @@ You can also skip workspaces entirely: `japp unpack App.japp ./App`, edit, `japp
   undeclared capabilities fail with a clear `PERMISSION_DENIED` error.
 * **Store data with `japp.storage`**, not in the archive. Data follows the
   `id`; keep the id stable across versions, change it to fork an app.
+* **Protect unsaved documents.** Update `japp.window.setDocumentEdited(boolean)`
+  when contents change, and use `japp.window.onBeforeClose` to offer Save /
+  Don’t Save / Cancel before close, quit or reload. Return `true` only after
+  saving succeeds or the user explicitly discards changes; see [API.md](API.md#protecting-unsaved-work).
 * **Design for resizing.** Use flexbox/grid and relative units; the window can
   be resized unless `"resizable": false`.
 * **macOS look.** `color-scheme: light dark`, the system font (the default), and

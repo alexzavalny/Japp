@@ -174,6 +174,7 @@ function redo() {
 function setDirty(dirty) {
   if (state.dirty === dirty) return;
   state.dirty = dirty;
+  japp?.window.setDocumentEdited?.(dirty).catch(console.error);
   updateTitle();
 }
 
@@ -1027,6 +1028,7 @@ async function newPicture() {
 }
 
 async function exitPaint() {
+  if (japp?.window.onBeforeClose) return japp.window.close();
   if (!(await confirmDiscard())) return;
   if (japp) japp.window.close(); else window.close();
 }
@@ -1702,6 +1704,9 @@ function setupFonts() {
 }
 
 // MARK: Start
+
+// Native close, ⌘W, ⌘Q and reload all use the same Save / Don't Save / Cancel path.
+japp?.window.onBeforeClose?.(() => confirmDiscard());
 
 async function start() {
   await loadSettings();

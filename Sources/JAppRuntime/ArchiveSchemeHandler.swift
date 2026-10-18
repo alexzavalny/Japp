@@ -68,10 +68,9 @@ final class ArchiveSchemeHandler: NSObject, WKURLSchemeHandler {
                 switch result {
                 case .success(let data?):
                     let mime = MIMEType.forPath(path)
-                    var headers: [String: String] = [:]
-                    if mime == "text/html" || mime == "application/xhtml+xml" {
-                        headers["Content-Security-Policy"] = csp
-                    }
+                    // SVG documents and worker scripts can initiate requests too.
+                    // Give every resource the app's policy, including range responses.
+                    var headers = ["Content-Security-Policy": csp]
                     if let range, let (body, contentRange) = Self.slice(data, range: range) {
                         headers["Content-Range"] = contentRange
                         self.finish(task, id: id, status: 206, body: body, mime: mime, headers: headers, headOnly: method == "HEAD")
@@ -130,7 +129,7 @@ final class ArchiveSchemeHandler: NSObject, WKURLSchemeHandler {
         return (data.subdata(in: start..<(end + 1)), "bytes \(start)-\(end)/\(count)")
     }
 
-    /// The policy sent with every HTML document. Inline scripts and `eval` stay
+    /// The policy sent with every resource. Inline scripts and `eval` stay
     /// allowed (plain-JS apps rely on them); what the policy enforces is that,
     /// without the `network` permission, nothing is loaded from outside the app.
     nonisolated static func contentSecurityPolicy(allowNetwork: Bool) -> String {

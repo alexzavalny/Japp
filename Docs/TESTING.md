@@ -5,8 +5,22 @@
 ```sh
 swift test                 # 66 unit tests (JAppKit), no GUI needed
 Scripts/build.sh && Scripts/install.sh
-Scripts/e2e-test.sh        # 126 end-to-end checks against the installed runtime (windows flash briefly)
+Scripts/e2e-test.sh        # integration checks, including the runtime regressions below (windows flash briefly)
+swift build && python3 Scripts/runtime-regression-test.py  # network policy and unsaved documents
 ```
+
+`runtime-regression-test.py` runs against the current debug executable without
+installing it. Override `JAPP_RUNTIME` with an assembled app's
+`Contents/MacOS/JAppRuntime` to test that build. It uses temporary archives and
+app data, a loopback-only HTTP server and native automation actions. It checks
+HTML, SVG iframe and worker requests with and without `network` (including CSP
+on range responses); close/quit/reload cancellation and asynchronous saves;
+edited-state fallback warnings; failed and removed handlers; and Paint's real
+Save / Don’t Save / Cancel sheets and cancelled file saves. Successful asynchronous
+saves are checked with a fixture that persists its contents before allowing exit;
+actually choosing a destination in the system Save panel remains a manual check.
+Automation actions are observed only when `JAppAutomationDir` is set; they use
+`dev.japp.runtime.automation.app` with close/quit/reload and sheet-button actions.
 
 **Unit tests** (`Tests/JAppKitTests`) cover the ZIP reader/writer (round trips;
 interoperability with `zip`, `ditto` and Python's `zipfile` both ways; ZIP Slip,

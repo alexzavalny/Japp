@@ -72,7 +72,8 @@ Each app gets its own origin, `japp-resource://<app-id>/`. That gives:
 * real HTTP semantics: MIME types from a fixed table, 404 for missing files,
   `Cache-Control: no-store` (the archive is the cache; reload must show edits),
   `X-Content-Type-Options: nosniff`;
-* a `Content-Security-Policy` header on every HTML response, which is how the
+* a `Content-Security-Policy` header on every resource response (including SVG
+  documents and worker scripts), which is how the
   `network` permission is enforced.
 
 Temporary extraction was considered (simpler `loadFileURL` with
@@ -272,6 +273,13 @@ runtime fixes these once for every app (`NativeFeel`, `AppWebView`):
   `drawsBackground` key (SPI) only when the manifest asks for a material.
 
 ## Runtime defaults
+
+App windows negotiate close, quit and reload through `japp.window.onBeforeClose`.
+The runtime awaits asynchronous save decisions, coalesces repeated requests, and
+warns natively when an edited document has no handler or its handler fails.
+`setDocumentEdited` mirrors the document state in AppKit. All sessions must approve
+before the process quits; cancelling one leaves every window open. Snapshot
+completion bypasses this negotiation only when cleaning up the automation process.
 
 All optional (`defaults write dev.japp.runtime <key> <value>`):
 
