@@ -4,31 +4,14 @@ import JAppKit
 
 // `japp` — create, validate, pack, run and edit JApps from the command line.
 
-let usage = """
-japp \(JAppVersion.runtime) — tools for JApp applications (.japp files)
+let usage = HelpGuide.usage
 
-USAGE
-  japp new <Name> [--id <com.example.name>] [--dir <parent>]   Create a new app folder
-  japp pack <folder> [--output <App.japp>]                     Package a folder as a .japp
-  japp unpack <App.japp> [<folder>] [--force]                  Extract a .japp into a folder
-  japp validate <App.japp|folder>                              Check an app for errors
-  japp info <App.japp|folder> [--json]                         Show manifest, files and data location
-  japp run <App.japp|folder> [--console] [--develop]           Run an app (--console: stream JS console here;
-                                                               --develop: Develop menu and Inspect Element)
-  japp edit <App.japp> [--no-window]                           Open the app's source for editing
-  japp save <App.japp> [--run] [--close] [--force]             Save edited source back into the .japp
-  japp snapshot <App.japp|folder> [--output shot.png]          Run headlessly, save a screenshot and
-                [--script test.js | --eval "<js>"] [--timeout <s>]  print a JSON report (console, script result)
-  japp restore-icon <App.japp>... [--remove]                   Re-apply (or remove) Finder icons
-  japp storage <App.japp|folder|app-id> [--clear]              Show (or delete) an app's stored data
-  japp bundles [list | clean | remove <app-id|App.japp>]        Show or remove the per-app bundles that give
-                                                               apps their own name in the menu bar and Dock
-  japp export <App.japp|folder> [--output <Name.app>]          Make a standalone Mac app with the runtime
-              [--sign <identity>] [--force]                    inside, for Macs without JApp Runtime
-  japp help | --version
+/// The command being run, so a usage mistake can show that command's synopsis.
+var activeCommand: HelpGuide.Command?
 
-A .japp file is a ZIP archive with manifest.json at its root. See Docs/FORMAT.md.
-"""
+/// This executable, symbolic links resolved. (`CommandLine.arguments[0]` is just
+/// "japp" when the shell found it on the PATH.)
+let executableURL = (Bundle.main.executableURL ?? URL(fileURLWithPath: CommandLine.arguments[0])).resolvingSymlinksInPath()
 
 struct CLIError: Error, CustomStringConvertible {
     let description: String
@@ -73,7 +56,10 @@ struct Arguments {
     }
 
     func path(_ index: Int, _ what: String) throws -> URL {
-        guard positional.indices.contains(index) else { throw CLIError("missing \(what)\n\n\(usage)") }
+        guard positional.indices.contains(index) else {
+            guard let command = activeCommand else { throw CLIError("missing \(what)\n\n\(usage)") }
+            throw CLIError("missing \(what)\n\nusage: \(command.synopsis)\nMore: japp help \(command.name)")
+        }
         return fileURL(positional[index])
     }
 }
@@ -108,7 +94,7 @@ func locateRuntime() -> (app: URL?, executable: URL)? {
         let url = fileURL(override)
         return url.pathExtension == "app" ? fromApp(url) : (fm.isExecutableFile(atPath: url.path) ? (nil, url) : nil)
     }
-    let me = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+    let me = executableURL
     let maybeApp = me.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
     if maybeApp.pathExtension == "app", let found = fromApp(maybeApp) { return found }
     if let installed = NSWorkspace.shared.urlForApplication(withBundleIdentifier: JAppVersion.runtimeBundleIdentifier),
@@ -551,6 +537,78 @@ func cmdNew(_ raw: [String]) throws {
     print("  Package it:   japp pack \"\(folder.path)\" --output \"\(name).japp\"")
 }
 
+// MARK: - japp help
+
+func cmdHelp(_ raw: [String]) throws {
+    guard let subject = raw.first(where: { !$0.hasPrefix("-") }) else {
+        print(HelpGuide.overview(helpEnvironment()))
+        return
+    }
+    if subject == "all" {
+        var parts = [HelpGuide.overview(helpEnvironment())]
+        parts += HelpGuide.commands.map(HelpGuide.page)
+        parts += HelpGuide.topics.map { topic in (try? topicText(topic)) ?? "\(topic.file): not found (it ships inside JApp Runtime)." }
+        print(parts.joined(separator: "\n\n" + String(repeating: "─", count: 96) + "\n\n"))
+    } else if let command = HelpGuide.command(named: subject) {
+        print(HelpGuide.page(for: command))
+    } else if let topic = HelpGuide.topic(named: subject) {
+        print(try topicText(topic))
+    } else {
+        throw CLIError("""
+            there is no help for “\(subject)”.
+              commands: \(HelpGuide.commands.map(\.name).joined(separator: ", "))
+              topics:   \(HelpGuide.topics.map(\.name).joined(separator: ", ")), all
+            """)
+    }
+}
+
+func topicText(_ topic: HelpGuide.Topic) throws -> String {
+    guard let docs = documentationDirectory(),
+          let text = try? String(contentsOf: docs.appendingPathComponent(topic.file), encoding: .utf8) else {
+        throw CLIError("\(topic.file) was not found. It ships inside JApp Runtime (Contents/Resources/Docs); install it with Scripts/install.sh.")
+    }
+    return text.trimmingCharacters(in: .newlines)
+}
+
+/// The documentation that belongs to this japp: in the app it is bundled in, in the
+/// source checkout of a development build, or else in the installed JApp Runtime.
+func documentationDirectory() -> URL? {
+    let fm = FileManager.default
+    func docs(in folder: URL) -> URL? {
+        let docs = folder.appendingPathComponent("Docs")
+        return fm.fileExists(atPath: docs.appendingPathComponent("API.md").path) ? docs : nil
+    }
+    let app = executableURL.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+    if app.pathExtension == "app", let found = docs(in: app.appendingPathComponent("Contents/Resources")) { return found }
+    var folder = executableURL.deletingLastPathComponent()
+    for _ in 0..<5 {  // .build/<triple>/debug/japp → the checkout
+        if fm.fileExists(atPath: folder.appendingPathComponent("Package.swift").path), let found = docs(in: folder) { return found }
+        folder.deleteLastPathComponent()
+    }
+    return locateRuntime()?.app.flatMap { docs(in: $0.appendingPathComponent("Contents/Resources")) }
+}
+
+func helpEnvironment() -> HelpGuide.Environment {
+    let fm = FileManager.default
+    let onPath = (ProcessInfo.processInfo.environment["PATH"] ?? "").split(separator: ":")
+        .map { ((String($0) as NSString).expandingTildeInPath as NSString).appendingPathComponent("japp") }
+        .first { fm.isExecutableFile(atPath: $0) }
+    let runtime = locateRuntime()
+    let docs = documentationDirectory()
+    let examplesFolder = docs?.deletingLastPathComponent().appendingPathComponent("Examples")
+    let examples = examplesFolder.flatMap { try? fm.contentsOfDirectory(at: $0, includingPropertiesForKeys: nil, options: .skipsHiddenFiles) }?
+        .sorted { $0.lastPathComponent < $1.lastPathComponent } ?? []
+    return HelpGuide.Environment(
+        executable: executableURL.path,
+        pathCommand: onPath,
+        pathCommandIsThis: onPath.map { URL(fileURLWithPath: $0).resolvingSymlinksInPath() == executableURL } ?? false,
+        runtime: runtime?.app ?? runtime?.executable,
+        runtimeVersion: runtime?.app.flatMap { Bundle(url: $0)?.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String },
+        docsDirectory: docs,
+        examples: examples,
+        supportDirectory: JAppPaths.supportDirectory)
+}
+
 // MARK: - Main
 
 let commandLine = Array(CommandLine.arguments.dropFirst())
@@ -559,6 +617,11 @@ guard let command = commandLine.first else {
     exit(0)
 }
 let rest = Array(commandLine.dropFirst())
+activeCommand = HelpGuide.command(named: command)
+if let activeCommand, activeCommand.name != "help", rest.contains("--help") || rest.contains("-h") {
+    print(HelpGuide.page(for: activeCommand))
+    exit(0)
+}
 do {
     switch command {
     case "new": try cmdNew(rest)
@@ -574,7 +637,7 @@ do {
     case "storage": try cmdStorage(rest)
     case "bundles", "bundle": try cmdBundles(rest)
     case "export": try cmdExport(rest)
-    case "help", "-h", "--help": print(usage)
+    case "help", "-h", "--help": try cmdHelp(rest)
     case "version", "--version", "-v": print("japp \(JAppVersion.runtime)")
     default:
         printError("unknown command “\(command)”\n\n\(usage)")

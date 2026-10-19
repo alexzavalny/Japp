@@ -3,7 +3,7 @@
 ## Automated
 
 ```sh
-swift test                 # 73 unit tests (JAppKit), no GUI needed
+swift test                 # 81 unit tests (JAppKit), no GUI needed
 Scripts/build.sh && Scripts/install.sh
 Scripts/e2e-test.sh        # integration checks, including the runtime regressions below (windows flash briefly)
 swift build && python3 Scripts/runtime-regression-test.py  # network policy and unsaved documents
@@ -41,7 +41,10 @@ not copied in, folders packed first, an existing app replaced only when asked,
 invalid apps writing nothing, never into the app's own folder however its path is spelled)
 and the new-app template (valid archive named after its file, replacing a file,
 names escaped in HTML and JSON, ids from any script made unique, folders,
-an AGENTS.md whose description of the workspace layout matches `SourceWorkspace`).
+an AGENTS.md whose description of the workspace layout matches `SourceWorkspace`)
+and `japp help` (every command the CLI dispatches is documented with its aliases,
+every option a command parses is in its synopsis, topics are shipped docs, the
+`--eval` recipe matches the starter app, lines fit in 100 columns).
 
 **End-to-end tests** (`Scripts/e2e-test.sh`, data isolated in a temp directory)
 check, on the real installed app:

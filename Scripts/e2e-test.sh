@@ -47,6 +47,21 @@ for tool in post-notification check-launch-services perform-service; do
     swiftc -O "$ROOT/Tests/E2E/$tool.swift" -o "$WORK/$tool" 2>/dev/null || { echo "could not compile $tool"; exit 1; }
 done
 
+echo "==> japp help"
+"$JAPP" help > "$WORK/help.txt" && pass "japp help" || fail "japp help"
+grep -qF "JApp Runtime  $(defaults read "$APP/Contents/Info" CFBundleShortVersionString): $APP" "$WORK/help.txt" && pass "japp help names the runtime and its version" || fail "japp help names the runtime and its version"
+grep -qF "Docs          $APP/Contents/Resources/Docs/" "$WORK/help.txt" && pass "japp help points to the shipped docs" || fail "japp help points to the shipped docs"
+grep -qF "Calculator.japp, ChessResults.japp, Paint.japp: real apps" "$WORK/help.txt" && pass "japp help lists the example apps" || fail "japp help lists the example apps"
+check "japp help api prints API.md" "$("$JAPP" help api | head -1)" '# JavaScript API (`window.japp`)'
+check "japp <command> --help prints its page" "$("$JAPP" screenshot --help | head -1 | cut -d: -f1)" "japp snapshot"
+"$JAPP" help no-such-thing >/dev/null 2>&1 && fail "japp help of something unknown fails" || pass "japp help of something unknown fails"
+# The --eval recipe of the guide, run as written against the app `japp new` makes.
+"$JAPP" new "Todo List" --id com.example.e2e-todo --dir "$WORK" >/dev/null
+RECIPE="$(sed -n '/--eval runs JavaScript/,/then look at/p' "$WORK/help.txt" | sed -nE "s/^      (document|await|return)/\1/p" | sed -E "s/'\$//")"
+(cd "$WORK" && "$JAPP" snapshot "Todo List" -o "$WORK/recipe.png" --eval "$RECIPE" > "$WORK/recipe.json" 2>/dev/null)
+check "the guide's --eval recipe works on the starter app" "$(json "$WORK/recipe.json" "d.get('scriptResult')")" "Hello, Ada!"
+check "the recipe ran with JAPP_SUPPORT_DIR data" "$(json "$JAPP_SUPPORT_DIR/Apps/com.example.e2e-todo/storage.json" "d['items']['name']")" "Ada"
+
 echo "==> Packaging"
 "$JAPP" pack "$ROOT/Examples/Calculator" --output "$WORK/Calculator.japp" >/dev/null && pass "japp pack" || fail "japp pack"
 "$JAPP" validate "$WORK/Calculator.japp" >/dev/null && pass "japp validate" || fail "japp validate"

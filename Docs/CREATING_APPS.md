@@ -225,6 +225,13 @@ native context menus).
 
 ## For AI coding assistants
 
+`japp help` prints the complete guide for agents in one page: what a JApp is,
+where JApp Runtime, the docs and the example apps are on this Mac, recipes for new
+and existing apps, the rules, the manifest, the `window.japp` API, how to check work
+(`japp snapshot --eval`) and the pitfalls. `japp help <command>` explains one
+command, its output and exit status; `japp help api` (or `format`, `guide`) prints
+these documents.
+
 Apps made with *File › New App…* or `japp new` carry an `AGENTS.md` with a
 condensed version of this guide and of [API.md](API.md), including how to save an
 Edit Source folder back into its `.japp` (`../session.json` names the file).

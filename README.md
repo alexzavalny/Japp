@@ -228,6 +228,10 @@ const username = await japp.storage.get("username");
 | `japp storage <App.japp\|id> [--clear]` | Show or clear stored data |
 | `japp export <App.japp\|folder> [--output Name.app] [--sign identity]` | Standalone `.app` with the runtime inside, for Macs without JApp Runtime |
 | `japp bundles [list \| clean \| remove <id>]` | Show or remove the per-app bundles that give apps their own name and Dock icon |
+| `japp help [<command> \| api \| format \| guide \| all]` | The complete guide, written for AI coding agents: recipes, rules, manifest, `window.japp`, pitfalls, and where everything is on this Mac |
+
+Pointing an AI coding agent at JApp? Tell it to run `japp help` first: one page has
+everything it needs to make, check and ship an app.
 
 ## How it works
 
