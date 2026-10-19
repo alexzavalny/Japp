@@ -3,7 +3,7 @@
 ## Automated
 
 ```sh
-swift test                 # 66 unit tests (JAppKit), no GUI needed
+swift test                 # 73 unit tests (JAppKit), no GUI needed
 Scripts/build.sh && Scripts/install.sh
 Scripts/e2e-test.sh        # integration checks, including the runtime regressions below (windows flash briefly)
 swift build && python3 Scripts/runtime-regression-test.py  # network policy and unsaved documents
@@ -33,7 +33,12 @@ workspaces (unpack, change tracking, save/backup/prune, invalid source refused,
 external-change detection, broken manifests still editable, GUI + CLI sharing a workspace)
 and app bundles (namespaced bundle ids, file-name sanitising, Info.plist without
 handler keys, valid ad-hoc signature, reuse when current, rename in place keeping
-the folder, `.icns` with every size, launch record following a moved file)
+the folder, `.icns` with every size, launch record following a moved file),
+standalone apps (`japp export`: launcher, library and the unchanged archive inside,
+the app id as bundle id, no runtime path or handler keys, hardened runtime with
+the library-validation entitlement, valid signature, quarantine and icon attributes
+not copied in, folders packed first, an existing app replaced only when asked,
+invalid apps writing nothing, never into the app's own folder however its path is spelled)
 and the new-app template (valid archive named after its file, replacing a file,
 names escaped in HTML and JSON, ids from any script made unique, folders,
 an AGENTS.md whose description of the workspace layout matches `SourceWorkspace`).
@@ -56,7 +61,15 @@ check, on the real installed app:
   names only the app, no runtime commands; JApp Runtime quits after the hand-over;
   the bundle is signed, declares no handlers and has the icon; launching the
   bundle on its own reopens its file; renaming the app renames the bundle in
-  place; `japp bundles` lists and removes it;
+  place; `japp bundles` lists and removes it; the app's File menu has Export as App…;
+* standalone apps: `japp export` writes a signed `Calculator.app` with the runtime
+  library and the unchanged `.japp` inside, the app id as bundle id and no handler
+  keys, and keeps an existing app without `--force`; `japp export .` in an app folder
+  writes the app next to the folder, not into it; a copy opened with `open`
+  (what a double-click does) runs Calculator as "Calculator" (`com.example.calculator`)
+  with the runtime loaded from inside itself and no JApp Runtime.app involved, has
+  no Edit Source/Reveal/Export items, leaves its signature intact, and opens without
+  a JApp prompt when the archive inside is quarantined;
 * Calculator arithmetic through simulated keys and clicks: precedence, decimals,
   division by zero and recovery, backspace, grouping, operator replacement;
 * `japp.storage` round trip, defaults, persistence across launches;
@@ -144,6 +157,8 @@ which the automated environment could not do:
 | `japp.clipboard` with permission | Not run, to avoid overwriting the clipboard. |
 | Paint with a real mouse and keyboard | Tools are tested with synthetic pointer events; real right-drags, the tool cursors, ⌘Z/⌘C/⌘V/⌘S and single-key tool shortcuts through WebKit, Open/Save panels, the system colour picker and dropping a file need a person. Dark mode was not rendered. |
 | Quarantine prompt buttons (Open / Show Source…) | Detection is tested; the alert needs a click. |
+| An exported app on a Mac without JApp Runtime, downloaded (Gatekeeper's *Open Anyway*) | The export is tested on this Mac: the app loads only the runtime inside it. Another Mac and Gatekeeper's dialogs need a person. |
+| *File › Export as App…*: the Save panel | The item is in the app's File menu; the export after the panel is the same code as `japp export`. |
 | *Open Calculator Example*, *Install Command-Line Tool…* menu items | Simple file operations; not clicked. |
 | Dragging the window by a drag region; double-click to zoom | Hit-testing is tested; `performDrag(with:)` needs a physical mouse. |
 | How the sidebar material and menus look on screen | Screenshots are rendered by the views themselves (the material shows as flat grey there); context menus were opened and read, not looked at. |

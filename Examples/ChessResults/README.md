@@ -30,4 +30,5 @@ details are selectable (`data-selectable`); everything else behaves like labels.
 ```sh
 japp run Examples/ChessResults --console      # run from source
 japp pack Examples/ChessResults --output "Chess Results.japp"
+japp export Examples/ChessResults             # → Chess Results.app, for a Mac without JApp
 ```

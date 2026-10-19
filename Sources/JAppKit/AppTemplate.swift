@@ -240,6 +240,11 @@ public enum AppTemplate {
             the page (an async function body) and get its result. Look at the screenshot.
           * `japp run . --console` opens the real window and streams the console to the
             terminal; it blocks until the app quits.
+        * **Sharing.** The `.japp` runs on any Mac with JApp Runtime. For a Mac without it,
+          `japp export` makes a standalone `\(name).app` with the runtime inside:
+          `japp export "<archivePath>"` after saving (Edit Source), or `japp export .` in a
+          plain folder (the app goes next to the folder, not into it). The exported app is
+          sealed by its signature: export again after every change.
         * If `japp` is not on the PATH: `/Applications/JApp Runtime.app/Contents/Helpers/japp`.
 
         ## Rules

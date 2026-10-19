@@ -97,7 +97,8 @@ for spec in \
   "new-app 1000 470" \
   "bridge 1000 540" \
   "architecture 1000 510" \
-  "security 1000 450"; do
+  "security 1000 450" \
+  "export 1000 500"; do
   set -- ${=spec}
   if (( ${#only} )) && ! (( ${only[(Ie)$1]} || ${only[(Ie)${5:-}]} )); then continue; fi
   figure "$@"

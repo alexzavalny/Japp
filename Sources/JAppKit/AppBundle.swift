@@ -182,7 +182,10 @@ public struct AppBundle: Equatable, Sendable {
         try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
             .write(to: contents.appendingPathComponent("Info.plist"))
         try Data("APPL????".utf8).write(to: contents.appendingPathComponent("PkgInfo"))
-        if sign { try codesign(built, entitlements: entitlements) }
+        // Ad-hoc signature, so the bundle's Info.plist and icon are sealed and macOS
+        // treats it as one consistent app. With JApp Runtime's entitlements the bundle
+        // gets the same hardened runtime as JApp Runtime.app.
+        if sign { try CodeSigning.sign(built, hardened: entitlements != nil, entitlements: entitlements) }
 
         let target = directory.appendingPathComponent(fileName + ".app", isDirectory: true)
         let previous = bundles(in: directory).map(\.url)
@@ -232,28 +235,8 @@ public struct AppBundle: Equatable, Sendable {
         return info
     }
 
-    /// Ad-hoc signature, so the bundle's Info.plist and icon are sealed and macOS
-    /// treats it as one consistent app. With JApp Runtime's entitlements the bundle
-    /// gets the same hardened runtime as JApp Runtime.app.
-    private static func codesign(_ bundle: URL, entitlements: URL?) throws {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
-        var arguments = ["--force", "--sign", "-", "--timestamp=none"]
-        if let entitlements { arguments += ["--options", "runtime", "--entitlements", entitlements.path] }
-        process.arguments = arguments + [bundle.path]
-        let errors = Pipe()
-        process.standardError = errors
-        process.standardOutput = FileHandle.nullDevice
-        try process.run()
-        let output = errors.fileHandleForReading.readDataToEndOfFile()
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else {
-            throw JAppError.io("codesign failed: \(String(decoding: output, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines))")
-        }
-    }
-
     /// rename(2): atomic, and unlike FileManager.moveItem it allows a change of case only.
-    private static func rename(_ source: URL, to destination: URL) throws {
+    static func rename(_ source: URL, to destination: URL) throws {
         guard Darwin.rename(source.path, destination.path) == 0 else {
             throw JAppError.io("Could not move \(source.lastPathComponent) to \(destination.path): \(String(cString: strerror(errno)))")
         }

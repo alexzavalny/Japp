@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="figures.css">
+<style>
+.head { display: grid; grid-template-columns: 1fr 350px; gap: 30px; align-items: end; }
+.body { position: absolute; left: 40px; right: 40px; top: 122px; display: grid; grid-template-columns: 250px 390px 1fr; gap: 42px; align-items: center; }
+.from { display: grid; gap: 16px; justify-items: start; }
+.from .file { grid-template-columns: 64px 1fr; justify-items: start; align-items: center; gap: 4px 12px; }
+.from .file img { width: 64px; height: 64px; grid-row: span 2; }
+pre.code { font-size: 11.5px; line-height: 1.6; width: 100%; }
+.contents { display: grid; gap: 6px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 12px; box-shadow: var(--shadow); }
+.contents .top { font: 600 12.5px/1 var(--mono); padding: 2px 2px 5px; }
+.entry { display: grid; grid-template-columns: 4px 1fr auto; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--line-2); border-radius: 9px; padding: 4px 12px 4px 0; overflow: hidden; }
+.entry i { height: 30px; width: 4px; border-radius: 0 2px 2px 0; display: block; }
+.entry b { font: 600 12px/1.2 var(--mono); display: block; }
+.entry small { font: 400 11px/1.2 var(--sans); color: var(--muted); }
+.entry .size { font: 500 11px/1 var(--mono); color: var(--muted); white-space: nowrap; }
+.entry.app { border-color: color-mix(in srgb, var(--app) 55%, var(--line)); background: linear-gradient(var(--app-soft), var(--app-soft)), var(--surface); }
+.to { display: grid; gap: 14px; justify-items: start; }
+.to .file { justify-items: start; }
+.to .file img { width: 84px; height: 84px; }
+.checks { display: grid; gap: 7px; font: 400 12.5px/1.3 var(--sans); color: var(--ink-2); }
+.checks div { display: grid; grid-template-columns: 16px 1fr; gap: 6px; }
+.checks .y { color: var(--ok); font-weight: 700; }
+.checks .n { color: var(--muted); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="fig">
+  <div class="head">
+    <div>
+      <div class="kicker">Share it</div>
+      <h2 class="title">No JApp on their Mac? <span class="dim">Export it.</span></h2>
+    </div>
+    <p class="lead small"><code>japp export</code> puts the <code>.japp</code>, unchanged, into a normal signed Mac app together with the runtime. Nothing to install on the other Mac.</p>
+  </div>
+
+  <div class="body">
+    <div class="from" id="from">
+      <div class="file"><img src="assets/icon-calculator.png" alt=""><span class="name">Calculator.japp</span><span class="meta">170 KB<br>needs JApp Runtime</span></div>
+<pre class="code"><span class="p">$</span> japp export Calculator.japp
+<span class="c">Exported Calculator 1.0.0
+  → Calculator.app
+  2.2 MB, runtime 0.3.0 inside</span></pre>
+      <span class="caption">or <span style="color:var(--ink-2)">File › Export as App…</span><br>in the running app</span>
+    </div>
+
+    <div class="contents" id="contents">
+      <div class="top">Calculator.app/Contents/</div>
+      <div class="entry"><i style="background:var(--muted)"></i><div><b>Info.plist</b><small>bundle id com.example.calculator</small></div><span class="size">2 KB</span></div>
+      <div class="entry"><i style="background:var(--runtime)"></i><div><b>MacOS/Calculator</b><small>the launcher</small></div><span class="size">53 KB</span></div>
+      <div class="entry"><i style="background:var(--runtime)"></i><div><b>Frameworks/libJAppRuntimeCore.dylib</b><small>JApp Runtime itself</small></div><span class="size">1.5 MB</span></div>
+      <div class="entry app"><i style="background:var(--app)"></i><div><b>Resources/Calculator.japp</b><small>the app, byte for byte</small></div><span class="size">170 KB</span></div>
+      <div class="entry"><i style="background:var(--app)"></i><div><b>Resources/AppIcon.icns</b><small>from the manifest's icon</small></div><span class="size">395 KB</span></div>
+      <div class="entry"><i style="background:var(--ok)"></i><div><b>_CodeSignature/</b><small>signed, hardened runtime</small></div><span class="size">3 KB</span></div>
+    </div>
+
+    <div class="to" id="to">
+      <div class="file"><img src="assets/icon-calculator.png" alt=""><span class="name">Calculator.app</span><span class="meta">2.2 MB</span></div>
+      <div class="checks">
+        <div><span class="y">✓</span><span>runs on Macs without JApp</span></div>
+        <div><span class="y">✓</span><span>own name, icon, bundle id</span></div>
+        <div><span class="y">✓</span><span>Developer ID with <span class="mono" style="font-size:11px">--sign</span></span></div>
+        <div><span class="n">–</span><span>Apple silicon, macOS 14+</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="figures.js"></script>
+<script>
+wire("#from pre", "#contents", { color: "rt", atTo: .54, straight: true });
+wire("#contents", "#to .file img", { color: "app", at: .3, straight: true });
+</script>
+</body>
+</html>

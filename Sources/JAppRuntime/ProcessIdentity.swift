@@ -6,6 +6,8 @@ import JAppKit
 /// * **JApp Runtime.app** — opens `.japp` files and hands each to its app bundle,
 ///   shows the welcome window and Edit Source windows;
 /// * **an app bundle** (`AppBundle`) — runs one app under that app's own name and icon;
+/// * **a standalone app** (`StandaloneApp`, `japp export`) — an app bundle that carries
+///   the runtime and its `.japp` inside, for Macs without JApp Runtime;
 /// * **a development build** (`.build/…/JAppRuntime`, no bundle) — runs apps itself.
 ///
 /// Runtime resources (docs, examples, the `japp` tool, the document icon) always
@@ -14,6 +16,28 @@ enum ProcessIdentity {
     /// The app this process exists for, when it is an app bundle.
     static let appBundle = AppBundle.Identity(infoDictionary: Bundle.main.infoDictionary)
     static var isAppBundle: Bool { appBundle != nil }
+
+    /// In a standalone app: the `.japp` inside it, the only app it runs.
+    static let embeddedArchive: URL? = {
+        guard appBundle != nil, let fields = Bundle.main.infoDictionary?[AppBundle.infoKey] as? [String: Any],
+              let name = fields[StandaloneApp.archiveKey] as? String, !name.isEmpty, !name.contains("/"),
+              let resources = Bundle.main.resourceURL else { return nil }
+        return resources.appendingPathComponent(name).standardizedFileURL
+    }()
+    static var isStandalone: Bool { embeddedArchive != nil }
+
+    /// The archive is the one sealed inside this standalone app (never edit it or touch its metadata).
+    static func isEmbedded(_ url: URL) -> Bool {
+        guard let embeddedArchive else { return false }
+        return url.standardizedFileURL.resolvingSymlinksInPath().path == embeddedArchive.resolvingSymlinksInPath().path
+    }
+
+    /// Where the runtime library this process runs was loaded from.
+    static let libraryPath: String = {
+        var info = Dl_info()
+        guard dladdr(#dsohandle, &info) != 0, let path = info.dli_fname else { return "" }
+        return URL(fileURLWithPath: String(cString: path)).resolvingSymlinksInPath().path
+    }()
 
     /// This process is JApp Runtime.app itself.
     static var isRuntimeApp: Bool {

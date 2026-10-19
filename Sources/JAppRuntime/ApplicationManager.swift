@@ -109,7 +109,7 @@ final class ApplicationManager {
             return
         }
         Log.runtime.notice("launch \(package.manifest.id, privacy: .public) from \(url.path, privacy: .public) in process \(getpid())")
-        if ProcessIdentity.isAppBundle { AppBundle.recordLaunch(of: url, appID: package.manifest.id) }
+        if ProcessIdentity.isAppBundle && !ProcessIdentity.isStandalone { AppBundle.recordLaunch(of: url, appID: package.manifest.id) }
         let session = AppSession(package: package, forwardConsole: forwardConsole, developer: developMode)
         session.onClose = { [weak self] in self?.sessionDidClose($0) }
         sessions.append(session)
@@ -202,6 +202,10 @@ final class ApplicationManager {
     /// from the file it last ran from, or ask where that file went.
     func openOwnApp() {
         guard let identity = ProcessIdentity.appBundle else { return }
+        if let embedded = ProcessIdentity.embeddedArchive {
+            open(embedded)
+            return
+        }
         if let url = AppBundle.lastLaunched(appID: identity.appID) {
             open(url)
             return

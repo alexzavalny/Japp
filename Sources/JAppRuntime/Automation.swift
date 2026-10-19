@@ -199,6 +199,8 @@ enum Automation {
             "localizedName": NSRunningApplication.current.localizedName ?? "",
             "executable": Bundle.main.executableURL?.lastPathComponent ?? "",
             "runtimeBundle": ProcessIdentity.runtimeBundle?.bundlePath ?? "",
+            "runtimeLibrary": ProcessIdentity.libraryPath,
+            "standalone": ProcessIdentity.isStandalone,
             "activationPolicy": policy,
         ]
     }

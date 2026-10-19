@@ -114,6 +114,12 @@ version kept in `backups/`; concurrent external modification detected.
 * **Same id, same data.** Any app can claim any id and thereby read that id's
   storage. Ids are not tied to a signature or author. (Fine for personal use;
   signing apps would be needed before sharing them widely.)
+* **Standalone apps** (`japp export`) are signed ad hoc unless exported with
+  `--sign`, so Gatekeeper blocks them on other Macs until the user allows them
+  (System Settings › Privacy & Security). Their bundle id is the app id itself, as for
+  any app you build: the `dev.japp.app.` namespace protects only the bundles JApp
+  Runtime generates on its own. The embedded `.japp` gets no JApp download prompt;
+  Gatekeeper's check of the signed app covers it.
 * **Inline script and eval are allowed** inside the app's own origin.
 * **Edit workspaces are ordinary files** under `~/Library/Application Support/JApp/Workspaces`
   and readable by other processes running as you.

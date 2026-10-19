@@ -18,7 +18,9 @@ enum TrustPolicy {
     }
 
     static func allowsLaunch(of package: JAppPackage) -> Bool {
-        guard package.kind == .archive, isQuarantined(package.url) else { return true }
+        // A standalone app's archive is sealed by the app's signature, and Gatekeeper
+        // has already assessed that app: asking again would only repeat the question.
+        guard package.kind == .archive, !ProcessIdentity.isEmbedded(package.url), isQuarantined(package.url) else { return true }
         let digest = package.archiveDigest ?? ""
         var trusted = RuntimeSettings.store.stringArray(forKey: trustedKey) ?? []
         if trusted.contains(digest) { return true }

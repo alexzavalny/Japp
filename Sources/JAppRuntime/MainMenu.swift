@@ -7,7 +7,8 @@ import AppKit
 /// appears in developer mode; a hidden menu's shortcuts are inactive, so ⌘R and
 /// friends stay free for the app itself. In an app bundle the runtime's own
 /// commands (About JApp Runtime, Install Command-Line Tool, New App…, Open…, Help) are left
-/// out, so the menu bar reads like the app's own.
+/// out, so the menu bar reads like the app's own; a standalone app also leaves out
+/// the commands that work on the `.japp` file.
 @MainActor
 final class MainMenu {
     private let aboutItem = NSMenuItem(title: "About JApp Runtime", action: #selector(AppDelegate.showAbout(_:)), keyEquivalent: "")
@@ -97,10 +98,15 @@ final class MainMenu {
             menu.addItem(item("Open…", #selector(AppDelegate.openDocument(_:)), "o"))
             menu.addItem(.separator())
         }
-        menu.addItem(item("Edit Source…", #selector(AppDelegate.editSource(_:)), "e", [.command, .option]))
-        menu.addItem(item("Reveal in Finder", #selector(AppDelegate.revealInFinder(_:)), "r", [.command, .shift]))
-        menu.addItem(item("Restore Finder Icon", #selector(AppDelegate.restoreFinderIcon(_:))))
-        menu.addItem(.separator())
+        // A standalone app's archive is sealed inside it: nothing to edit, reveal or export.
+        if !ProcessIdentity.isStandalone {
+            menu.addItem(item("Edit Source…", #selector(AppDelegate.editSource(_:)), "e", [.command, .option]))
+            menu.addItem(item("Reveal in Finder", #selector(AppDelegate.revealInFinder(_:)), "r", [.command, .shift]))
+            menu.addItem(item("Restore Finder Icon", #selector(AppDelegate.restoreFinderIcon(_:))))
+            menu.addItem(.separator())
+            menu.addItem(item("Export as App…", #selector(AppDelegate.exportApp(_:))))
+            menu.addItem(.separator())
+        }
         menu.addItem(item("Close Window", #selector(NSWindow.performClose(_:)), "w"))
         return menu
     }

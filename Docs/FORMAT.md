@@ -18,6 +18,11 @@ Everything an app needs is inside the archive. The only thing outside it is the
 shared JApp Runtime, which is installed once. No build step, compiler or
 package manager is involved: write the files, zip them, double-click.
 
+For a Mac without JApp Runtime, `japp export App.japp` wraps the archive, unchanged,
+in a standalone `App.app` that carries the runtime too
+([CREATING_APPS.md › Sharing an app](CREATING_APPS.md#sharing-an-app)). The format
+is the same either way: the `.app` contains the `.japp` file.
+
 ## 1. Archive rules
 
 | Rule | Detail |
@@ -155,6 +160,9 @@ web pages, which open in the default browser.
   store reserved for the same id.
 * Data belongs to the **id**, not the file name: renaming or moving the `.japp`
   keeps its data; editing and saving it keeps its data.
+* An app exported with `japp export` uses the same `japp.storage` file as its
+  `.japp` on the same Mac, but its own WebKit data store: `localStorage`, IndexedDB
+  and cookies are not shared between the two.
 * **Two files with the same id share the same data** (like two copies of the same
   Mac app). Running both at once is safe — every write merges at the key level
   under a file lock — but they see each other's values. To make an independent

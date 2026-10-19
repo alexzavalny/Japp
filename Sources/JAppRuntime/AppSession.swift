@@ -32,7 +32,7 @@ final class AppSession: NSObject {
 
     var manifest: Manifest { package.manifest }
     var backgroundColor: NSColor? { manifest.window.backgroundColor.flatMap(NSColor.init(hex:)) }
-    var canEditSource: Bool { package.kind == .archive }
+    var canEditSource: Bool { package.kind == .archive && !ProcessIdentity.isEmbedded(url) }
 
     /// Developer mode adds the Develop menu (Reload, zoom) and Inspect Element.
     var isDeveloperMode: Bool {

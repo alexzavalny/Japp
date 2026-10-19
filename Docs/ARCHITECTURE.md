@@ -14,11 +14,13 @@ Sources/
 │   ├── SourceWorkspace   Edit Source: unpack, track changes, validate, repack, back up
 │   ├── AppTemplate       the "Hello, World!" app (and its AGENTS.md) of File › New App… and `japp new`
 │   ├── AppBundle, ICNS   per-app bundles: generate, sign, update in place, launch record
+│   ├── StandaloneApp     `japp export`: a self-contained .app with the runtime and the .japp inside
+│   ├── CodeSigning       /usr/bin/codesign (sign, verify)
 │   ├── FinderIcon        custom Finder icons
 │   └── InstanceRegistry  which process hosts which app
 ├── JAppLauncher/   main.c: the main executable of JApp Runtime.app and of every app bundle
 ├── JAppRuntime/    JAppRuntimeCore.dylib: the runtime itself (AppKit + WebKit)
-│   ├── RuntimeMain, ProcessIdentity   entry point; JApp Runtime vs. an app's bundle
+│   ├── RuntimeMain, ProcessIdentity   entry point; JApp Runtime vs. an app's bundle vs. a standalone app
 │   ├── AppDelegate, MainMenu, WelcomeWindowController
 │   ├── ApplicationManager   hosting policy (app bundles), open/reload/edit routing
 │   ├── AppSession           one running app: window + WKWebView + bridge + storage
@@ -271,6 +273,55 @@ runtime fixes these once for every app (`NativeFeel`, `AppWebView`):
 * **Materials.** `material` puts an `NSVisualEffectView` behind a transparent web
   view. WebKit has no public API for a transparent web view; the runtime uses the
   `drawsBackground` key (SPI) only when the manifest asks for a material.
+
+### 10. Standalone apps (`japp export`, "projector mode")
+
+A `.japp` needs JApp Runtime on the Mac that opens it. For Macs without it,
+`japp export App.japp` (or *File › Export as App…* in the running app) writes a
+self-contained `App.app` of about 2 MB:
+
+```
+Calculator.app/Contents/
+  Info.plist                           CFBundleIdentifier = the app id; JAppApplication.archive
+  MacOS/Calculator                     a copy of the launcher (main.c)
+  Frameworks/libJAppRuntimeCore.dylib  a copy of the runtime library
+  Resources/Calculator.japp            the app, byte for byte
+  Resources/AppIcon.icns
+```
+
+The launcher already looks in `../Frameworks` first (that is how JApp Runtime.app
+itself starts), so the exported app loads the runtime inside it and never looks for
+an installed one. The runtime sees an app bundle (`JAppApplication` in Info.plist)
+whose `archive` key names the embedded file (`ProcessIdentity.embeddedArchive`), and:
+
+* opens that archive on launch, the way an app bundle opens its last file;
+* has no Edit Source, Reveal in Finder, Restore Finder Icon or Export menu items:
+  the signature seals the archive, and any change (even a Finder icon, which is
+  file metadata) would break it;
+* writes no launch record and skips JApp's own download prompt for the embedded
+  archive, because Gatekeeper assessed the signed app that contains it;
+* otherwise runs the app exactly as JApp Runtime does (same bridge, permissions,
+  native feel).
+
+| | App bundle (generated) | Standalone app (exported) |
+|---|---|---|
+| Bundle id | `dev.japp.app.<app-id>` | `<app-id>` — an app you made, like any Xcode app |
+| Runtime | loaded from JApp Runtime.app | inside the bundle; frozen at the version that exported it |
+| The app | the `.japp` it last ran (launch record) | the `.japp` inside, read-only |
+| `japp.storage` | `Apps/<app-id>/` | the same folder: both share the data on one Mac |
+| `localStorage`, IndexedDB | WebKit container of `dev.japp.app.<app-id>` | WebKit container of `<app-id>`, separate |
+
+Signing: the library is signed first, then the bundle, with JApp Runtime's
+entitlements and the hardened runtime, and the result is verified with
+`codesign --verify --strict --deep`. The default is an ad-hoc signature;
+`--sign "Developer ID Application: …"` signs with a certificate (with a secure
+timestamp) so the app can be notarized. Everything is written from file data, not
+copied, because extended attributes such as a Finder icon or quarantine flag are
+not allowed inside a signed bundle.
+
+Limits: the exported app runs on the macOS versions and CPUs the runtime was built
+for (macOS 14+, Apple silicon for a default `Scripts/build.sh`). To pick up a newer
+runtime, export again.
 
 ## Runtime defaults
 

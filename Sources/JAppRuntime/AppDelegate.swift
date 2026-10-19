@@ -211,6 +211,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         manager.editSource(url)
     }
 
+    /// *File › Export as App…*: the app as a standalone Mac app, with the runtime
+    /// inside, for Macs without JApp Runtime (`japp export` does the same).
+    @objc func exportApp(_ sender: Any?) {
+        guard let session = manager.keySession, !ProcessIdentity.isEmbedded(session.url) else { return }
+        let runtime: StandaloneApp.Runtime
+        do {
+            guard let app = ProcessIdentity.runtimeBundle?.bundleURL else { throw JAppError.io("JApp Runtime.app was not found.") }
+            runtime = try StandaloneApp.Runtime(app: app)
+        } catch {
+            NSAlert(error: error).runModal()
+            return
+        }
+        let panel = NSSavePanel()
+        panel.title = "Export as App"
+        panel.message = "A standalone app with JApp Runtime inside: it runs on Macs that don’t have JApp."
+        panel.nameFieldStringValue = AppBundle.fileName(for: session.manifest.name) + ".app"
+        panel.allowedContentTypes = [.applicationBundle]
+        panel.prompt = "Export"
+        panel.directoryURL = session.url.deletingLastPathComponent()
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            // The Save panel has already confirmed replacing an existing app.
+            let result = try StandaloneApp.export(session.url, to: url, runtime: runtime, replacing: true)
+            Log.runtime.notice("exported \(result.manifest.id, privacy: .public) to \(result.url.path, privacy: .public)")
+            NSWorkspace.shared.activateFileViewerSelecting([result.url])
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = "“\(session.manifest.name)” can’t be exported."
+            alert.informativeText = "\(error)"
+            alert.alertStyle = .warning
+            alert.runModal()
+        }
+    }
+
     @objc func revealInFinder(_ sender: Any?) {
         guard let session = manager.keySession else { return }
         NSWorkspace.shared.activateFileViewerSelecting([session.url])
@@ -244,7 +278,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
         let manifest = session.manifest
         var credits = manifest.description ?? ""
         if let author = manifest.author { credits += (credits.isEmpty ? "" : "\n") + "By \(author)" }
-        credits += (credits.isEmpty ? "" : "\n\n") + "\(manifest.id)\nRuns on JApp Runtime \(JAppVersion.runtime)"
+        credits += (credits.isEmpty ? "" : "\n\n") + "\(manifest.id)\n"
+            + (ProcessIdentity.isStandalone ? "Made with JApp Runtime \(JAppVersion.runtime)" : "Runs on JApp Runtime \(JAppVersion.runtime)")
         NSApp.orderFrontStandardAboutPanel(options: [
             .applicationName: manifest.name,
             .applicationVersion: manifest.version,
@@ -316,6 +351,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation, 
             return manager.keySession != nil
         case #selector(restoreFinderIcon(_:)):
             return manager.keySession?.canEditSource == true
+        case #selector(exportApp(_:)):
+            return manager.keySession.map { !ProcessIdentity.isEmbedded($0.url) } ?? false
         default:
             return true
         }

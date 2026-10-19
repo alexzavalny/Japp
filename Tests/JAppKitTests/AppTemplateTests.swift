@@ -24,6 +24,7 @@ final class AppTemplateTests: XCTestCase {
         XCTAssertTrue(agents.hasPrefix("# Hello There — notes for AI coding agents"))
         XCTAssertTrue(agents.contains("japp save \"<archivePath>\" --run"))
         XCTAssertTrue(agents.contains("## Icon"), "agents are asked to replace the placeholder icon")
+        XCTAssertTrue(agents.contains("japp export"), "agents know how to make a standalone app")
     }
 
     /// AGENTS.md tells agents that `../session.json` names the `.japp` of an Edit Source workspace.

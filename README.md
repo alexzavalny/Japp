@@ -28,6 +28,10 @@ No Xcode, compiler, Node.js, npm or bundler is needed to make or run an app —
 only the JApp Runtime, installed once. Apps run in the system's WebKit engine
 (no Chromium), so the runtime is small and each app is a few kilobytes.
 
+**Giving it to someone who doesn't have JApp?** `japp export` turns the same file
+into an ordinary, signed `Calculator.app` of about 2 MB with the runtime inside:
+they double-click it and it runs, with nothing to install. [Share it ↓](#share-it)
+
 ## The loop
 
 <picture>
@@ -143,6 +147,45 @@ japp pack "Todo List" --output "Todo List.japp"
 or write four files by hand and zip them — see **[Docs/CREATING_APPS.md](Docs/CREATING_APPS.md)**
 (includes a checklist for AI coding assistants).
 
+## Share it
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Docs/images/export-dark.png">
+  <img src="Docs/images/export-light.png" alt="japp export Calculator.japp writes Calculator.app, 2.2 MB: its Contents hold Info.plist with the bundle id com.example.calculator, the launcher MacOS/Calculator, JApp Runtime itself as Frameworks/libJAppRuntimeCore.dylib, the app byte for byte as Resources/Calculator.japp, the icon and the code signature. It runs on Macs without JApp, with its own name, icon and bundle id">
+</picture>
+
+One app, two ways to hand it over — no build step in either:
+
+| | **The `.japp` file** | **An exported `.app`** |
+|---|---|---|
+| The other Mac needs | JApp Runtime | nothing |
+| Size (Calculator) | 170 KB | 2.2 MB, mostly the 1.5 MB runtime library |
+| Change it | right-click › **Edit JApp Source** | sealed by its signature: edit the `.japp`, export again |
+| Runtime updates | every app gets them | frozen at the version it was exported with |
+| Runs on | any Mac with JApp Runtime (macOS 14+) | Apple silicon, macOS 14+ |
+
+Send the `.japp` with AirDrop, email or a USB stick; an app downloaded from the
+internet asks once before its first run. For a Mac without JApp, choose
+**File › Export as App…** in the running app, or:
+
+```sh
+japp export build/Calculator.japp            # → ./Calculator.app
+japp export ./My\ App --output ~/Desktop     # from a folder, into a folder
+japp export App.japp --sign "Developer ID Application: Your Name (TEAMID)"
+```
+
+The `.japp` goes into `Calculator.app/Contents/Resources` byte for byte, next to a
+copy of the runtime library and the 53 KB launcher; the launcher loads the library
+from inside the app, so it never looks for an installed JApp Runtime. A Flash projector, except the app
+inside is still plain HTML, CSS and JS that you can read.
+
+The exported app is signed ad hoc by default, so on another Mac macOS blocks the
+first open until it is allowed in System Settings › Privacy & Security (**Open
+Anyway**). To share it widely, sign it with a Developer ID (`--sign`) and notarize
+it — see [CREATING_APPS.md › Sharing an app](Docs/CREATING_APPS.md#sharing-an-app).
+On one Mac, the exported app and the `.japp` share `japp.storage`; their
+`localStorage` is separate.
+
 ## Native features from JavaScript
 
 <picture>
@@ -183,6 +226,7 @@ const username = await japp.storage.get("username");
 | `japp snapshot <App.japp> [-o shot.png] [--eval js]` | Run headlessly; screenshot + JSON report |
 | `japp restore-icon <App.japp>…` | Re-apply Finder icons |
 | `japp storage <App.japp\|id> [--clear]` | Show or clear stored data |
+| `japp export <App.japp\|folder> [--output Name.app] [--sign identity]` | Standalone `.app` with the runtime inside, for Macs without JApp Runtime |
 | `japp bundles [list \| clean \| remove <id>]` | Show or remove the per-app bundles that give apps their own name and Dock icon |
 
 ## How it works
@@ -200,6 +244,9 @@ const username = await japp.storage.get("username");
   process with its own name in the menu bar, Dock, ⌘-Tab and notifications, its
   own icon, ⌘Q and crash isolation. The bundle holds only a 53 KB launcher that
   loads the runtime from JApp Runtime.app; you can keep it in the Dock.
+* **Standalone apps** — `japp export` puts the launcher, the runtime library and the
+  `.japp` in one signed `.app`; the launcher loads the library next to it, so nothing
+  needs to be installed ([ARCHITECTURE.md › Standalone apps](Docs/ARCHITECTURE.md#10-standalone-apps-japp-export-projector-mode)).
 * **Native feel** — no text selection on labels, arrow cursor, no bouncing page,
   no browser context menus or Reload in the menu bar; hidden title bars with
   drag regions, window materials (translucent sidebars), window state for CSS

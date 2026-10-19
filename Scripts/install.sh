@@ -48,5 +48,6 @@ esac
 echo
 echo "Installed JApp Runtime $(defaults read "$DEST/Contents/Info" CFBundleShortVersionString)."
 echo "  Each app gets its own small app bundle the first time it runs (japp bundles)."
+echo "  For a Mac without JApp: japp export App.japp (a standalone App.app, the runtime inside)."
 echo "  Try:  open \"$ROOT/build/Calculator.japp\""
 echo "        japp help"

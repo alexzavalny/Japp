@@ -2,7 +2,9 @@
 
 A JApp is a folder of web files plus a `manifest.json`, zipped into one
 `.japp` file. No compiler, bundler, Node.js or Xcode is needed — only an
-editor and, optionally, the `japp` command that ships with JApp Runtime.
+editor and, optionally, the `japp` command that ships with JApp Runtime. When
+it's done, share the `.japp`, or export it as a standalone `.app` for Macs
+without JApp Runtime ([Sharing an app](#sharing-an-app)).
 
 ## The five-minute version
 
@@ -136,6 +138,27 @@ You can also skip workspaces entirely: `japp unpack App.japp ./App`, edit, `japp
 | `japp snapshot App.japp --eval 'return document.title'` | Also runs JavaScript in the page (as an async function body) and includes its result. |
 | `japp info App.japp` | Manifest summary, file list, data location. |
 | `japp storage App.japp [--clear]` | Shows or clears the app's stored data. |
+
+## Sharing an app
+
+* **The `.japp` itself** — AirDrop, email, a USB stick. The other Mac needs JApp
+  Runtime; an app downloaded from the internet asks once before its first run.
+* **A standalone app** — for Macs without JApp Runtime: *File › Export as App…* in
+  the running app, or
+
+  ```sh
+  japp export App.japp                       # → ./App.app (about 2 MB, the runtime inside)
+  japp export ./App --output ~/Desktop       # from a folder; into a folder
+  cd App && japp export .                    # → ../App.app, next to the folder, never inside it
+  japp export App.japp --sign "Developer ID Application: Your Name (TEAMID)"
+  ```
+
+  The exported app is signed ad hoc by default. On another Mac, macOS blocks its
+  first open until it is allowed in System Settings › Privacy & Security
+  (**Open Anyway**). To share it widely, sign it with a Developer ID and notarize
+  it (`xcrun notarytool submit App.zip --wait`, then `xcrun stapler staple App.app`;
+  this needs an Apple Developer account). It cannot be edited — edit the `.japp`
+  and export again.
 
 ## Guidelines
 

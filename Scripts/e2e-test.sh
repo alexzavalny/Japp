@@ -34,7 +34,7 @@ cleanup() {
     # Never leave the runtime in automation mode.
     defaults delete dev.japp.runtime JAppAutomationDir 2>/dev/null
     # Test app bundles must not linger in Launch Services next to the real ones.
-    for bundle in "$JAPP_SUPPORT_DIR"/AppBundles/*/*.app; do
+    for bundle in "$JAPP_SUPPORT_DIR"/AppBundles/*/*.app "$WORK"/export/*.app "$WORK"/export-copy/*.app; do
         [ -d "$bundle" ] && "$LSREGISTER" -u "$bundle" >/dev/null 2>&1
     done
 }
@@ -86,6 +86,7 @@ if bundle_open "$WORK/Bundled.japp" "$WORK/bundle1"; then
     check "bundle id is namespaced" "$(json "$B" "d['identity']['bundleIdentifier']")" "dev.japp.app.com.example.calculator"
     check "app menu names the app only" "$(json "$B" "d['native']['menuBar'][0]['title'], [i for i in d['native']['menuBar'][0]['items'] if 'JApp' in i or 'Command-Line' in i or 'Calculator' in i]")" "('Calculator', ['About Calculator', 'Hide Calculator', 'Quit Calculator'])"
     check "no runtime commands in the File menu" "$(json "$B" "[i for m in d['native']['menuBar'] if m['title'] == 'File' for i in m['items'] if i in ('New App…', 'Open…', 'Edit Source…')]")" "['Edit Source…']"
+    check "File › Export as App… in the app's menu" "$(json "$B" "'Export as App…' in [i for m in d['native']['menuBar'] if m['title'] == 'File' for i in m['items']]")" "True"
     check "the app still works" "$(json "$B" "(d['ok'], d['windowTitle'])")" "(True, 'Calculator')"
 else
     fail "the app runs in its own app bundle" "no report"
@@ -122,6 +123,51 @@ fi
 sleep 1
 "$JAPP" bundles remove com.example.calculator >/dev/null 2>&1 && [ ! -e "$JAPP_SUPPORT_DIR/AppBundles/com.example.calculator" ] \
     && pass "japp bundles remove" || fail "japp bundles remove"
+
+echo "==> Standalone apps (japp export: the runtime inside, for Macs without JApp Runtime)"
+EXPORTED="$WORK/export/Calculator.app"
+mkdir -p "$WORK/export"
+if "$JAPP" export "$WORK/Calculator.japp" --output "$WORK/export" > "$WORK/export.txt" 2>&1; then pass "japp export"; else fail "japp export" "$(cat "$WORK/export.txt")"; fi
+codesign --verify --strict --deep "$EXPORTED" 2>/dev/null && pass "standalone app is signed, library included" || fail "standalone app is signed, library included"
+check "it carries the runtime library and the unchanged .japp" \
+    "$([ -f "$EXPORTED/Contents/Frameworks/libJAppRuntimeCore.dylib" ] && cmp -s "$WORK/Calculator.japp" "$EXPORTED/Contents/Resources/Calculator.japp" && echo yes)" "yes"
+check "its bundle id is the app id; no runtime path, document types or services" \
+    "$(plutil -convert json -o - "$EXPORTED/Contents/Info.plist" | $PY -c "import json,sys; d=json.load(sys.stdin); print(d['CFBundleIdentifier'], [k for k in ('JAppRuntimePath','CFBundleDocumentTypes','CFBundleURLTypes','NSServices','UTExportedTypeDeclarations') if k in d])")" \
+    "com.example.calculator []"
+"$JAPP" export "$WORK/Calculator.japp" --output "$EXPORTED" >/dev/null 2>&1 && fail "an existing app is kept without --force" || pass "an existing app is kept without --force"
+# `japp export .` in an app folder: the app goes next to the folder, never into it (the next pack would include it).
+mkdir -p "$WORK/export-src" && cp -R "$ROOT/Examples/Calculator" "$WORK/export-src/Calculator"
+(cd "$WORK/export-src/Calculator" && "$JAPP" export . >/dev/null 2>&1)
+check "japp export . writes the app next to the folder, not into it" \
+    "$([ -d "$WORK/export-src/Calculator.app" ] && [ ! -e "$WORK/export-src/Calculator/Calculator.app" ] && echo yes)" "yes"
+standalone_open() {  # standalone_open <app> <report dir>: what a Finder double-click does
+    mkdir -p "$2"
+    open -n --env "JAPP_SUPPORT_DIR=$JAPP_SUPPORT_DIR" "$1" --args -JAppAutomationDir "$2" -JAppAutomationQuit YES
+    wait_for "$2/report.json"
+}
+# A copy somewhere else: nothing in it points back at JApp Runtime.app.
+mkdir -p "$WORK/export-copy" && ditto "$EXPORTED" "$WORK/export-copy/Calculator.app"
+if standalone_open "$WORK/export-copy/Calculator.app" "$WORK/standalone1"; then
+    S="$WORK/standalone1/report.json"
+    check "the standalone app runs its embedded app" "$(json "$S" "(d['ok'], d['windowTitle'], d['identity']['standalone'])")" "(True, 'Calculator', True)"
+    check "it loads the runtime from inside itself, not from JApp Runtime.app" \
+        "$(json "$S" "(d['identity']['runtimeLibrary'].endswith('/export-copy/Calculator.app/Contents/Frameworks/libJAppRuntimeCore.dylib'), d['identity']['runtimeBundle'])")" "(True, '')"
+    check "process identity is the app's" "$(json "$S" "(d['identity']['localizedName'], d['identity']['bundleIdentifier'])")" "('Calculator', 'com.example.calculator')"
+    check "no Edit Source, Reveal or Export in a standalone app" \
+        "$(json "$S" "[i for m in d['native']['menuBar'] if m['title'] == 'File' for i in m['items'] if i in ('Edit Source…', 'Reveal in Finder', 'Restore Finder Icon', 'Export as App…')]")" "[]"
+else
+    fail "the standalone app runs its embedded app" "no report"
+fi
+sleep 1
+codesign --verify --strict --deep "$WORK/export-copy/Calculator.app" 2>/dev/null && pass "running it leaves its signature intact (no Finder icon written inside)" || fail "running it leaves its signature intact"
+# A quarantined archive inside is covered by the app's signature: no second trust prompt.
+xattr -w com.apple.quarantine "0081;00000000;Safari;" "$WORK/export-copy/Calculator.app/Contents/Resources/Calculator.japp"
+if standalone_open "$WORK/export-copy/Calculator.app" "$WORK/standalone2"; then
+    check "its archive needs no JApp trust prompt" "$(json "$WORK/standalone2/report.json" "d['ok']")" "True"
+else
+    fail "its archive needs no JApp trust prompt" "no report"
+fi
+sleep 1
 
 echo "==> Running Calculator"
 "$JAPP" snapshot "$WORK/Calculator.japp" --output "$WORK/calculator.png" --script "$ROOT/Tests/E2E/calculator.test.js" > "$WORK/run1.json" 2>/dev/null

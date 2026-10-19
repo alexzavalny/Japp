@@ -23,6 +23,8 @@ USAGE
   japp storage <App.japp|folder|app-id> [--clear]              Show (or delete) an app's stored data
   japp bundles [list | clean | remove <app-id|App.japp>]        Show or remove the per-app bundles that give
                                                                apps their own name in the menu bar and Dock
+  japp export <App.japp|folder> [--output <Name.app>]          Make a standalone Mac app with the runtime
+              [--sign <identity>] [--force]                    inside, for Macs without JApp Runtime
   japp help | --version
 
 A .japp file is a ZIP archive with manifest.json at its root. See Docs/FORMAT.md.
@@ -459,6 +461,76 @@ func cmdBundles(_ raw: [String]) throws {
     }
 }
 
+// MARK: - japp export
+
+func cmdExport(_ raw: [String]) throws {
+    let args = try Arguments(raw, valueOptions: ["output", "sign"], aliases: ["-o": "--output"])
+    let source = try args.path(0, ".japp file or folder")
+    guard FileManager.default.fileExists(atPath: source.path) else { throw CLIError("“\(source.path)” does not exist") }
+    let installed = try requireRuntime()
+    let runtime: StandaloneApp.Runtime
+    if let app = installed.app {
+        do { runtime = try StandaloneApp.Runtime(app: app) } catch { throw CLIError("\(error)") }
+    } else {
+        // A development build: the library sits next to the runtime binary. Without
+        // JApp Runtime's entitlements the app is signed without the hardened runtime.
+        let library = installed.executable.deletingLastPathComponent().appendingPathComponent(StandaloneApp.libraryName)
+        guard FileManager.default.fileExists(atPath: library.path) else { throw CLIError("\(StandaloneApp.libraryName) was not found next to \(installed.executable.path)") }
+        runtime = StandaloneApp.Runtime(launcher: installed.executable, library: library, entitlements: nil)
+    }
+
+    let package: JAppPackage
+    do { package = try JAppPackage.load(from: source) } catch { throw CLIError("\(error)") }
+    let fileName = AppBundle.fileName(for: package.manifest.name) + ".app"
+    var output = args.options["output"].map(fileURL) ?? fileURL(FileManager.default.currentDirectoryPath).appendingPathComponent(fileName)
+    if args.options["output"] == nil, StandaloneApp.isInside(output, folder: source) {
+        output = source.deletingLastPathComponent().appendingPathComponent(fileName)  // `japp export .`: next to the folder
+    }
+    var isDirectory: ObjCBool = false
+    if output.pathExtension != "app", FileManager.default.fileExists(atPath: output.path, isDirectory: &isDirectory), isDirectory.boolValue {
+        output.appendPathComponent(fileName)  // --output names a folder to export into
+    }
+    guard output.pathExtension == "app" else { throw CLIError("the output must end in .app (or be an existing folder)") }
+    if FileManager.default.fileExists(atPath: output.path) && !args.flags.contains("force") {
+        throw CLIError("“\(output.path)” already exists (use --force to replace it)")
+    }
+
+    let identity = args.options["sign"] ?? "-"
+    let result: StandaloneApp.Result
+    do {
+        result = try StandaloneApp.export(source, to: output, runtime: runtime, signingIdentity: identity, replacing: true)
+    } catch JAppError.invalidManifest(let issues) {
+        printError("“\(source.lastPathComponent)” is not a valid app:")
+        printIssues(issues)
+        throw CLIError("nothing was written")
+    } catch {
+        throw CLIError("\(error)")
+    }
+    let manifest = result.manifest
+    print("Exported \(manifest.name) \(manifest.version) (\(manifest.id)) → \(result.url.path)")
+    print("  \(byteCount(result.size)), JApp Runtime \(JAppVersion.runtime) inside; runs on macOS 14 or later\(architectures(of: runtime.library))")
+    printIssues(result.warnings)
+    if identity == "-" {
+        print("  Signed ad hoc: on another Mac, the first open is blocked until the user allows it in")
+        print("  System Settings › Privacy & Security (Open Anyway). To share it widely, export with")
+        print("  --sign \"Developer ID Application: …\" and notarize it (xcrun notarytool).")
+    } else {
+        print("  Signed as \(identity). Notarize it before sharing: xcrun notarytool submit … --wait, then xcrun stapler staple.")
+    }
+}
+
+/// ", Apple silicon only" and the like, from the library's Mach-O header.
+func architectures(of library: URL) -> String {
+    guard let handle = try? FileHandle(forReadingFrom: library), let header = try? handle.read(upToCount: 8), header.count == 8 else { return "" }
+    let magic = header.prefix(4).reduce(UInt32(0)) { $0 << 8 | UInt32($1) }
+    let cpu = header.suffix(4).reversed().reduce(UInt32(0)) { $0 << 8 | UInt32($1) }  // little-endian thin Mach-O
+    switch magic {
+    case 0xCFFA_EDFE: return cpu == 0x0100_000C ? " (Apple silicon only)" : cpu == 0x0100_0007 ? " (Intel only)" : ""
+    case 0xCAFE_BABE, 0xCAFE_BABF: return " (Apple silicon and Intel)"
+    default: return ""
+    }
+}
+
 // MARK: - japp new
 
 func cmdNew(_ raw: [String]) throws {
@@ -501,6 +573,7 @@ do {
     case "restore-icon": try cmdRestoreIcon(rest)
     case "storage": try cmdStorage(rest)
     case "bundles", "bundle": try cmdBundles(rest)
+    case "export": try cmdExport(rest)
     case "help", "-h", "--help": print(usage)
     case "version", "--version", "-v": print("japp \(JAppVersion.runtime)")
     default:

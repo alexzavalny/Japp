@@ -70,7 +70,8 @@ await japp.storage.set("todos", todos);
 
 `localStorage` and IndexedDB also work and are isolated per app; prefer
 `japp.storage` for data the user cares about — it is a plain file you can
-inspect, back up and reset (`japp storage <app>`).
+inspect, back up and reset (`japp storage <app>`), and the only store an app
+shares with its exported `.app` (`japp export`) on the same Mac.
 
 ## japp.dialog
 

@@ -29,7 +29,8 @@ enum IconManager {
 
     @discardableResult
     static func applyFinderIcon(for package: JAppPackage, force: Bool = false) -> FinderIcon.Outcome {
-        guard RuntimeSettings.setsFinderIcons || force else { return .noIcon }
+        // A Finder icon is metadata written to the file; inside a signed app it would break the seal.
+        guard RuntimeSettings.setsFinderIcons || force, !ProcessIdentity.isEmbedded(package.url) else { return .noIcon }
         return FinderIcon.apply(for: package, force: force)
     }
 }
