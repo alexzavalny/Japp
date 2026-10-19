@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="figures.css">
+<style>
+.head { display: grid; grid-template-columns: 1fr 340px; gap: 30px; align-items: end; }
+.row { position: absolute; left: 40px; right: 40px; top: 140px; display: grid; grid-template-columns: 212px 1fr 212px; gap: 64px; align-items: start; }
+.col { display: grid; gap: 14px; align-content: start; }
+.col .window { width: 212px; }
+.edit { display: grid; gap: 12px; }
+.es { border-radius: 11px; overflow: hidden; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.es .bar { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--line-2); font: 600 12px/1 var(--sans); color: var(--ink-2); }
+.es .bar i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.es .bar span { margin-left: 8px; }
+.es .body { display: grid; grid-template-columns: 34px 1fr; gap: 4px 10px; padding: 10px 12px 12px; align-items: center; }
+.es .body img { width: 34px; height: 34px; grid-row: span 2; }
+.es .body b { font: 600 13.5px/1.1 var(--sans); }
+.es .body small { font: 400 11px/1.2 var(--sans); color: var(--muted); }
+.es .buttons { grid-column: 1 / -1; display: flex; gap: 8px; margin-top: 8px; }
+.es button { font: 500 12px/1 var(--sans); padding: 6px 11px; border-radius: 6px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); }
+.es button.default { background: #2F6FEB; border-color: #2F6FEB; color: #fff; box-shadow: 0 0 0 4px rgba(47, 111, 235, .25); }
+.es .buttons .spacer { flex: 1; }
+.back { position: absolute; left: 40px; right: 40px; top: 514px; text-align: center; }
+pre.code .sg { display: inline-block; width: 1.1em; }
+pre.code .del .sg { color: #FF5D52; } pre.code .add .sg { color: #3CCB6B; }
+pre.code .add::before, pre.code .del::before { content: none; }
+</style>
+</head>
+<body>
+<div class="fig">
+  <div class="head">
+    <div>
+      <div class="kicker">The loop</div>
+      <h2 class="title">Run it. Change it. <span class="dim">Run it again.</span></h2>
+    </div>
+    <p class="lead small">No project to open, nothing to rebuild: the source lives inside the file, and saving puts it back.</p>
+  </div>
+
+  <div class="row">
+    <div class="col">
+      <span class="step"><span class="n">1</span>Double-click</span>
+      <div class="window" id="before"><img src="shots/calculator.png" alt=""></div>
+    </div>
+
+    <div class="col edit">
+      <span class="step"><span class="n">2</span>Edit JApp Source</span>
+      <div id="editor">
+        <div class="code-title"><span class="dots"><i></i><i></i><i></i></span>style.css — in your editor</div>
+<pre class="code"><span class="ln">5</span><span class="sg"> </span><span class="k">:root</span> {
+<span class="ln">10</span><span class="sg"> </span>  --key-function: <span class="s">#a5a5aa</span>;
+<span class="del"><span class="ln">12</span><span class="sg">−</span>  --key-operator: <span class="s">#ff9f0a</span>;</span><span class="add"><span class="ln">12</span><span class="sg">+</span>  --key-operator: <span class="s">#30d158</span>;</span><span class="ln">13</span><span class="sg"> </span>  --key-operator-text: <span class="s">#ffffff</span>;
+<span class="ln">15</span><span class="sg"> </span>}</pre>
+      </div>
+      <div class="es" id="es">
+        <div class="bar"><i style="background:#FF5F57"></i><i style="background:#FEBC2E"></i><i style="background:#28C840"></i><span>Calculator — Edit Source</span></div>
+        <div class="body">
+          <img src="assets/icon-calculator.png" alt="">
+          <b>Calculator</b>
+          <small>Editing the source of “Calculator.japp”</small>
+          <div class="buttons"><button>Discard Changes…</button><span class="spacer"></span><button>Save</button><button class="default" id="saverun">Save &amp; Run</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col">
+      <span class="step"><span class="n">3</span>Save &amp; Run</span>
+      <div class="window" id="after"><img src="shots/calculator-green.png" alt=""></div>
+    </div>
+  </div>
+  <p class="back caption">The new code is saved inside <b style="color:var(--ink-2)">Calculator.japp</b> (validated, atomic, with a backup). Open it tomorrow: still green.</p>
+</div>
+<script src="figures.js"></script>
+<script>
+wire("#before", "#editor pre", { color: "rt", at: .42, bend: 26 });
+wire("#saverun", "#after", { color: "ok", atTo: .62, bend: 30 });
+wire("#after", "#before", { color: "muted", side: "bottom", toSide: "bottom", dash: true, bend: 34, gap: 10 });
+</script>
+</body>
+</html>

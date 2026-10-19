@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="figures.css">
+<style>
+.head { display: grid; grid-template-columns: 1fr 330px; gap: 30px; align-items: end; }
+.body { position: absolute; left: 40px; right: 40px; top: 128px; display: grid; grid-template-columns: 350px 200px 1fr; gap: 50px; align-items: center; }
+.ways { display: grid; gap: 16px; }
+.menu { width: 230px; background: var(--surface); border: 1px solid var(--line); border-radius: 9px; box-shadow: var(--shadow); padding: 5px; font: 400 13px/1 var(--sans); }
+.menu .title { font: 600 11px/1 var(--mono); color: var(--muted); margin: 0; padding: 6px 9px 7px; letter-spacing: .04em; }
+.menu .it { display: flex; justify-content: space-between; padding: 6px 9px; border-radius: 5px; color: var(--ink); }
+.menu .it.on { background: #2F6FEB; color: #fff; }
+.menu .it span:last-child { opacity: .6; }
+.menu .sep { height: 1px; background: var(--line-2); margin: 4px 8px; }
+.or { font: 600 11px/1 var(--mono); color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
+pre.code { font-size: 11.5px; line-height: 1.6; }
+.tree { font: 400 13px/1.95 var(--mono); color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; box-shadow: var(--shadow); }
+.tree b { font-weight: 600; }
+.tree div { display: flex; align-items: center; gap: 8px; }
+.tree div.in { padding-left: 16px; }
+.tree i { width: 4px; height: 12px; border-radius: 2px; display: inline-block; }
+.tree .tag { margin-left: auto; }
+#hello { width: 280px; }
+.note { margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="fig">
+  <div class="head">
+    <div>
+      <div class="kicker">Make your own</div>
+      <h2 class="title">One command. <span class="dim">Or ⌘N.</span></h2>
+    </div>
+    <p class="lead small">Every new app starts as a working Hello World, plus an <code>AGENTS.md</code> that teaches AI coding agents how JApps work.</p>
+  </div>
+
+  <div class="body">
+    <div class="ways" id="ways">
+      <div class="menu">
+        <p class="title">JApp Runtime › File</p>
+        <div class="it on"><span>New App…</span><span>⌘N</span></div>
+        <div class="it"><span>Open…</span><span>⌘O</span></div>
+        <div class="sep"></div>
+        <div class="it"><span>Edit Source…</span><span>⌥⌘E</span></div>
+      </div>
+      <span class="or">or in Terminal</span>
+<pre class="code"><span class="p">$</span> japp new <span class="s">"Hello World"</span>
+<span class="c">Created Hello World (com.example.hello-world)</span>
+<span class="p">$</span> japp run <span class="s">"Hello World"</span> --console
+<span class="p">$</span> japp pack <span class="s">"Hello World"</span>
+<span class="c"># → Hello World.japp, ready to double-click</span></pre>
+    </div>
+
+    <div class="tree" id="tree">
+      <div><b>Hello World/</b></div>
+      <div class="in"><i style="background:var(--runtime)"></i>manifest.json</div>
+      <div class="in"><i style="background:#E8664A"></i>index.html</div>
+      <div class="in"><i style="background:var(--web)"></i>style.css</div>
+      <div class="in"><i style="background:#E9B949"></i>app.js</div>
+      <div class="in"><i style="background:var(--app)"></i>assets/icon.png</div>
+      <div class="in"><i style="background:var(--ok)"></i>AGENTS.md</div>
+    </div>
+
+    <div>
+      <div class="window" id="hello"><img src="shots/hello.png" alt=""></div>
+      <p class="caption note">A greeting, a field and a button;<br>the name is kept with <span style="color:var(--ink-2)">japp.storage</span>.</p>
+    </div>
+  </div>
+</div>
+<script src="figures.js"></script>
+<script>
+wire("#ways", "#tree", { color: "rt", bend: 26 });
+wire("#tree", "#hello", { color: "app", bend: 26 });
+</script>
+</body>
+</html>

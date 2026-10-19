@@ -1,17 +1,39 @@
-# JApp
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="Docs/images/hero-dark.png">
+    <img src="Docs/images/hero-light.png" alt="One file in, a Mac app out: Calculator.japp, a ZIP of manifest.json, index.html, style.css, app.js and an icon, opens as a native Calculator window">
+  </picture>
+</p>
 
-**Applications as documents.** A JApp is a single `.japp` file — a ZIP of HTML,
-CSS, JavaScript and a `manifest.json`. Double-click it and it runs as a native
-macOS app with its own window, title, icon and Dock tile. Right-click it and
-choose **Edit JApp Source** to change it; save, and the new version runs.
+<h1 align="center">JApp</h1>
 
-```
-DOUBLE-CLICK → RUN APPLICATION      EDIT SOURCE → MODIFY CODE      SAVE → RUN UPDATED APPLICATION
-```
+<p align="center">
+  <b>Applications as documents.</b> A whole Mac app in one <code>.japp</code> file:<br>
+  double-click it to run, right-click it to change it.
+</p>
+
+<p align="center">
+  <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-111?logo=apple&logoColor=white">
+  <img alt="Swift 5.9" src="https://img.shields.io/badge/Swift-5.9-F05138?logo=swift&logoColor=white">
+  <img alt="WebKit" src="https://img.shields.io/badge/engine-system%20WebKit-0A6FE0">
+  <img alt="No dependencies" src="https://img.shields.io/badge/dependencies-none-1B9447">
+</p>
+
+A JApp is a single `.japp` file — a ZIP of HTML, CSS, JavaScript and a
+`manifest.json`. Double-click it and it runs as a native macOS app with its own
+window, title, icon and Dock tile. Right-click it and choose **Edit JApp Source**
+to change it; save, and the new version runs.
 
 No Xcode, compiler, Node.js, npm or bundler is needed to make or run an app —
 only the JApp Runtime, installed once. Apps run in the system's WebKit engine
 (no Chromium), so the runtime is small and each app is a few kilobytes.
+
+## The loop
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Docs/images/loop-dark.png">
+  <img src="Docs/images/loop-light.png" alt="1. Double-click Calculator.japp: the calculator with orange operator keys. 2. Edit JApp Source: style.css in your editor, --key-operator changed from #ff9f0a to #30d158, and the Edit Source window with Discard Changes, Save and Save & Run. 3. Save & Run: the same calculator with green operator keys">
+</picture>
 
 ## Quick start
 
@@ -24,7 +46,7 @@ Scripts/install.sh        # installs to /Applications, registers .japp, installs
 open build/Calculator.japp
 ```
 
-Then try the full loop:
+Then try the loop from the picture above:
 
 1. Double-click `build/Calculator.japp` in Finder — the calculator opens.
 2. Right-click it › *Services* › **Edit JApp Source** (or *File › Edit Source…* in the app).
@@ -33,21 +55,76 @@ Then try the full loop:
 
 ## Examples
 
-* **[Calculator](Examples/Calculator)** — the reference app: plain HTML/CSS/JS, history in `japp.storage`, hidden title bar.
-* **[Chess Results](Examples/ChessResults)** — a client for the
-  [Easy Chess Results API](https://github.com/alexzavalny/ChessResultsApi): tournament
-  search, standings, player results, player index, followed players with notifications.
-  Uses `japp.http.fetch`, ES modules and a hash router; no build step. Styled as a Mac
-  app: translucent sidebar, unified toolbar, native context menus.
-* **[Paint](Examples/Paint)** — the tool set of Windows 98 Paint in a present-day Mac window:
-  all sixteen tools (free-form select, eraser and colour eraser, flood fill, airbrush, curves,
-  polygons…), the 28-colour box, flip/rotate, stretch/skew, canvas size, zoom with pixel grid,
-  undo, and PNG/BMP/JPEG files through `japp.dialog`. Menus are real macOS menus
-  (`japp.menu.popup` with SF Symbols and shortcuts); pixels are still drawn without anti-aliasing.
+<p align="center">
+  <img src="Docs/images/desktop.jpg" alt="The example apps on a Mac desktop: Chess Results showing the Hoogeveen Open standings, Paint with a drawing of a house, Calculator and Hello World, each with its own icon in the Dock and Paint's name in the menu bar">
+</p>
 
-`Scripts/build.sh` packs every folder in `Examples/` into `build/<Name>.japp`.
+Every app runs as its own process, with its own name in the menu bar and its own
+Dock icon. `Scripts/build.sh` packs every folder in `Examples/` into `build/<Name>.japp`.
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="Examples/Calculator"><img src="Docs/images/app-calculator.jpg" alt="Calculator"></a>
+      <p><b><a href="Examples/Calculator">Calculator</a></b> — the reference app: plain
+      HTML/CSS/JS, history in <code>japp.storage</code>, hidden title bar.</p>
+    </td>
+    <td width="50%" valign="top">
+      <a href="Examples/ChessResults"><img src="Docs/images/app-chess.jpg" alt="Chess Results showing tournament standings"></a>
+      <p><b><a href="Examples/ChessResults">Chess Results</a></b> — a client for the
+      <a href="https://github.com/alexzavalny/ChessResultsApi">Easy Chess Results API</a>:
+      tournament search, standings, player results, followed players with notifications.
+      <code>japp.http.fetch</code>, ES modules and a hash router, no build step; a
+      translucent sidebar, unified toolbar and native context menus.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <a href="Examples/Paint"><img src="Docs/images/app-paint.jpg" alt="Paint with a drawing of a house"></a>
+      <p><b><a href="Examples/Paint">Paint</a></b> — the tool set of Windows 98 Paint in a
+      present-day Mac window: all sixteen tools, the 28-colour box, flip/rotate,
+      stretch/skew, zoom with pixel grid, undo, and PNG/BMP/JPEG files through
+      <code>japp.dialog</code>. Menus are real macOS menus (<code>japp.menu.popup</code>
+      with SF Symbols and shortcuts); pixels are still drawn without anti-aliasing.</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="Docs/images/app-hello.jpg" alt="The Hello World starter app">
+      <p><b>Hello World</b> — what every new app starts as (<i>File › New App…</i> or
+      <code>japp new</code>): a greeting, a text field and a button, with the name kept
+      in <code>japp.storage</code>.</p>
+    </td>
+  </tr>
+</table>
+
+## Inside a `.japp`
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Docs/images/anatomy-dark.png">
+  <img src="Docs/images/anatomy-light.png" alt="Calculator.japp is a ZIP of manifest.json, index.html, style.css, app.js and assets/icon.png. In the manifest, name becomes the menu bar and Dock name, icon the Dock tile and Finder icon, window a 400 by 550 native window, and permissions decide which japp APIs answer">
+</picture>
+
+A plain ZIP with `manifest.json` at the root ([FORMAT.md](Docs/FORMAT.md)). Rename
+it to `.zip` and Archive Utility opens it; JApp Runtime reads it in place.
+
+```json
+{
+  "manifestVersion": 1,
+  "id": "com.example.calculator",
+  "name": "Calculator",
+  "version": "1.0.0",
+  "entry": "index.html",
+  "icon": "assets/icon.png",
+  "window": { "width": 400, "height": 550, "minWidth": 300, "minHeight": 400, "resizable": true },
+  "permissions": ["storage"]
+}
+```
 
 ## Make your own
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Docs/images/new-app-dark.png">
+  <img src="Docs/images/new-app-light.png" alt="File › New App… (⌘N) in JApp Runtime, or japp new &quot;Hello World&quot; in Terminal, creates a folder with manifest.json, index.html, style.css, app.js, assets/icon.png and AGENTS.md, which runs as the Hello World app">
+</picture>
 
 Open JApp Runtime and choose **File › New App…** (⌘N; also a button in its
 welcome window). Name the app and pick a folder: JApp writes `<Name>.japp` — a
@@ -66,23 +143,30 @@ japp pack "Todo List" --output "Todo List.japp"
 or write four files by hand and zip them — see **[Docs/CREATING_APPS.md](Docs/CREATING_APPS.md)**
 (includes a checklist for AI coding assistants).
 
-```json
-{
-  "manifestVersion": 1,
-  "id": "com.example.calculator",
-  "name": "Calculator",
-  "version": "1.0.0",
-  "entry": "index.html",
-  "icon": "assets/icon.png",
-  "window": { "width": 400, "height": 550, "minWidth": 300, "minHeight": 400, "resizable": true },
-  "permissions": ["storage"]
-}
-```
+## Native features from JavaScript
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Docs/images/bridge-dark.png">
+  <img src="Docs/images/bridge-light.png" alt="Calls to window.japp (storage, dialog, notification, http, menu) go from the page through an origin check and a permission check to Swift and AppKit, which show a real NSMenu or a notification from the app itself. storage, dialog, notification, clipboard and http need a permission; menu, window, app and dialog.message are always there">
+</picture>
+
+`window.japp` is injected into every app: storage, file dialogs, notifications,
+clipboard, CORS-free HTTP, native context menus and the window — Promise-based and
+permission-checked in Swift. Full reference: **[Docs/API.md](Docs/API.md)**.
 
 ```js
 await japp.storage.set("username", "Alex");
 const username = await japp.storage.get("username");
 ```
+
+| Module | Permission | |
+|---|---|---|
+| `japp.storage` | `storage` | JSON key-value store, kept outside the archive |
+| `japp.dialog` | `dialog` | Open and Save panels; `message()` needs none |
+| `japp.notification` | `notifications` | Sent by the app itself, with its name and icon |
+| `japp.clipboard` | `clipboard` | Read and write text |
+| `japp.http` | `network` | Native HTTP, not subject to CORS |
+| `japp.menu`, `japp.window`, `japp.app` | — | Native context menus, the app's window, its manifest |
 
 ## The `japp` command
 
@@ -99,10 +183,15 @@ const username = await japp.storage.get("username");
 | `japp snapshot <App.japp> [-o shot.png] [--eval js]` | Run headlessly; screenshot + JSON report |
 | `japp restore-icon <App.japp>…` | Re-apply Finder icons |
 | `japp storage <App.japp\|id> [--clear]` | Show or clear stored data |
+| `japp bundles [list \| clean \| remove <id>]` | Show or remove the per-app bundles that give apps their own name and Dock icon |
 
 ## How it works
 
-* **Format** — a plain ZIP with `manifest.json` at the root ([FORMAT.md](Docs/FORMAT.md)).
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Docs/images/architecture-dark.png">
+  <img src="Docs/images/architecture-light.png" alt="Calculator.app, Chess Results.app and Paint.app are small generated bundles that each load libJAppRuntimeCore.dylib from JApp Runtime.app. The runtime serves files to the system WebKit from the ZIP in memory and keeps data in ~/Library/Application Support/JApp/Apps/&lt;id&gt;. 53 KB launcher per app, 1.5 MB shared library, about 0.5 s from double-click to a running app, 0 bytes extracted">
+</picture>
+
 * **Runtime** — Swift/AppKit app hosting a `WKWebView` per app. Files are served
   straight from the archive in memory through a `WKURLSchemeHandler` at
   `japp-resource://<app-id>/`; nothing is extracted to run an app.
@@ -111,8 +200,6 @@ const username = await japp.storage.get("username");
   process with its own name in the menu bar, Dock, ⌘-Tab and notifications, its
   own icon, ⌘Q and crash isolation. The bundle holds only a 53 KB launcher that
   loads the runtime from JApp Runtime.app; you can keep it in the Dock.
-* **Native API** — `window.japp` (storage, file dialogs, notifications, clipboard,
-  CORS-free HTTP, native context menus, window), Promise-based, permission-checked in Swift ([API.md](Docs/API.md)).
 * **Native feel** — no text selection on labels, arrow cursor, no bouncing page,
   no browser context menus or Reload in the menu bar; hidden title bars with
   drag regions, window materials (translucent sidebars), window state for CSS
@@ -122,9 +209,17 @@ const username = await japp.storage.get("username");
   `NSWorkspace.setIcon`, the file's Finder icon.
 * **Editing** — unpacks into a workspace, opens your code editor, and saves back
   atomically with validation and backups ([ARCHITECTURE.md](Docs/ARCHITECTURE.md)).
-* **Security** — strict ZIP validation (ZIP Slip, bombs, symlinks), per-app
-  origin and data store, CSP-enforced network permission, origin-checked bridge,
-  confirmation for downloaded apps ([SECURITY.md](Docs/SECURITY.md)).
+
+## Security
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="Docs/images/security-dark.png">
+  <img src="Docs/images/security-light.png" alt="Six attacks that are stopped: ZIP Slip paths, zip bombs, symbolic links and duplicate entries, network access without the network permission, reading another app's data, and running a downloaded app without confirmation">
+</picture>
+
+Strict ZIP validation (ZIP Slip, bombs, symlinks), per-app origin and data store,
+CSP-enforced network permission, origin-checked bridge, confirmation for
+downloaded apps. Threat model and known limitations: **[Docs/SECURITY.md](Docs/SECURITY.md)**.
 
 ## Status of the MVP
 
@@ -164,10 +259,11 @@ Sources/JAppRuntime/     the macOS app (AppKit + WebKit)
 Sources/japp/            the command-line tool
 Tests/JAppKitTests/      unit tests (swift test)
 Tests/E2E/               end-to-end test script and helpers
-Examples/Calculator/     the reference app (source of Calculator.japp)
+Examples/                Calculator, ChessResults, Paint (sources of the .japp files)
 Resources/               Info.plist, runtime and document icons
 Scripts/                 build.sh, install.sh, e2e-test.sh, make-icons.swift
 Docs/                    FORMAT, API, CREATING_APPS, ARCHITECTURE, SECURITY, TESTING
+Docs/images/             the pictures in this README; src/make.sh renders them with JApp itself
 ```
 
 Uninstall: delete `/Applications/JApp Runtime.app`, `/usr/local/bin/japp` and

@@ -1,0 +1,109 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="figures.css">
+<style>
+.head { display: grid; grid-template-columns: 1fr 360px; gap: 30px; align-items: end; }
+.body { position: absolute; left: 40px; right: 40px; top: 124px; display: grid; grid-template-columns: 236px 330px 1fr; gap: 44px; align-items: start; }
+.entries { display: grid; gap: 8px; }
+.entries .file { justify-items: start; grid-template-columns: 64px 1fr; align-items: center; gap: 4px 12px; margin-bottom: 8px; }
+.entries .file img { width: 64px; height: 64px; grid-row: span 2; }
+.entry { display: grid; grid-template-columns: 4px 1fr auto; gap: 10px; align-items: center; background: var(--surface); border: 1px solid var(--line-2); border-radius: 9px; padding: 7px 10px 7px 0; overflow: hidden; }
+.entry i { height: 34px; width: 4px; border-radius: 0 2px 2px 0; display: block; }
+.entry b { font: 600 12.5px/1.2 var(--mono); display: block; }
+.entry small { font: 400 11px/1.2 var(--sans); color: var(--muted); }
+.entry .size { font: 500 11px/1 var(--mono); color: var(--muted); }
+pre.code { font-size: 12px; line-height: 1.62; }
+pre.code .hlb { display: inline-block; vertical-align: top; border-radius: 6px; box-shadow: 0 0 0 1.5px #8DB9FF; padding: 0 6px; margin: 0 -6px; }
+pre.code .hl { border-radius: 4px; box-shadow: 0 0 0 1.5px currentColor; padding: 0 2px; margin: 0 -2px; }
+.effects { display: grid; gap: 16px; }
+.effect { display: grid; gap: 7px; }
+.effect .caption { font-size: 11.5px; }
+.mini-menubar { display: flex; gap: 12px; align-items: center; height: 26px; padding: 0 10px; border-radius: 7px; background: var(--surface); border: 1px solid var(--line); font: 500 12px/1 var(--sans); width: max-content; }
+.mini-menubar b { font-weight: 700; }
+.tiles { display: flex; gap: 12px; align-items: end; }
+.tiles img { width: 44px; height: 44px; }
+.tiles .finder { display: grid; justify-items: center; gap: 3px; font: 600 10px/1 var(--sans); }
+.tiles .finder span { background: #2F6FEB; color: #fff; padding: 2px 5px; border-radius: 4px; }
+.dock-tile { padding: 5px 7px 3px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); display: grid; justify-items: center; gap: 3px; }
+.dock-tile i { width: 4px; height: 4px; border-radius: 50%; background: var(--ink-2); display: block; }
+.winbox { width: 78px; height: 104px; border: 1.5px solid var(--ink-2); border-radius: 7px; position: relative; background: var(--surface); }
+.winbox::before { content: ""; position: absolute; left: 6px; top: 6px; width: 22px; height: 6px; background: radial-gradient(circle at 3px 3px, #FF5F57 2.6px, transparent 3px), radial-gradient(circle at 11px 3px, #FEBC2E 2.6px, transparent 3px), radial-gradient(circle at 19px 3px, #28C840 2.6px, transparent 3px); }
+.winbox span { position: absolute; font: 500 10px/1 var(--mono); color: var(--muted); }
+.winbox .w { left: 0; right: 0; bottom: -15px; text-align: center; }
+.winbox .h { right: -30px; top: 46px; }
+.perm { display: flex; gap: 6px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="fig">
+  <div class="head">
+    <div>
+      <div class="kicker">Inside a .japp</div>
+      <h2 class="title">A plain ZIP. <span class="dim">Plus a manifest.</span></h2>
+    </div>
+    <p class="lead small">JApp Runtime serves each file straight from the archive in memory. Nothing is extracted, nothing is compiled.</p>
+  </div>
+
+  <div class="body">
+    <div class="entries">
+      <div class="file"><img src="assets/icon-calculator.png" alt=""><span class="name">Calculator.japp</span><span class="meta">ZIP · 169,836 bytes</span></div>
+      <div class="entry" id="e-manifest"><i style="background:var(--runtime)"></i><div><b>manifest.json</b><small>who the app is</small></div><span class="size">507 B</span></div>
+      <div class="entry"><i style="background:#E8664A"></i><div><b>index.html</b><small>the entry page</small></div><span class="size">3.1 KB</span></div>
+      <div class="entry"><i style="background:var(--web)"></i><div><b>style.css</b><small>how it looks</small></div><span class="size">4.8 KB</span></div>
+      <div class="entry"><i style="background:#E9B949"></i><div><b>app.js</b><small>what it does</small></div><span class="size">12.6 KB</span></div>
+      <div class="entry"><i style="background:var(--app)"></i><div><b>assets/icon.png</b><small>Dock &amp; Finder icon</small></div><span class="size">163 KB</span></div>
+    </div>
+
+    <div>
+      <div class="code-title"><span class="dots"><i></i><i></i><i></i></span>manifest.json</div>
+<pre class="code" id="manifest">{
+  <span class="k">"manifestVersion"</span>: 1,
+  <span class="k">"id"</span>: <span class="s">"com.example.calculator"</span>,
+  <span class="k">"name"</span>: <span class="s hl" id="m-name">"Calculator"</span>,
+  <span class="k">"version"</span>: <span class="s">"1.0.0"</span>,
+  <span class="k">"entry"</span>: <span class="s">"index.html"</span>,
+  <span class="k">"icon"</span>: <span class="s hl" id="m-icon">"assets/icon.png"</span>,
+  <span class="hlb" id="m-window"><span class="k">"window"</span>: {
+    <span class="k">"width"</span>: 400, <span class="k">"height"</span>: 550,
+    <span class="k">"minWidth"</span>: 300, <span class="k">"minHeight"</span>: 400,
+    <span class="k">"titleBarStyle"</span>: <span class="s">"hidden"</span>
+  },</span>
+  <span class="k">"permissions"</span>: <span class="hl" id="m-perm" style="color:#7EE2A8">[<span class="s">"storage"</span>]</span>
+}</pre>
+    </div>
+
+    <div class="effects">
+      <div class="effect" id="x-name">
+        <div class="mini-menubar"><b>Calculator</b><span>File</span><span>Edit</span><span>Window</span></div>
+        <span class="caption">menu bar, Dock, ⌘-Tab, notifications</span>
+      </div>
+      <div class="effect" id="x-icon">
+        <div class="tiles">
+          <div class="dock-tile"><img src="assets/icon-calculator.png" alt=""><i></i></div>
+          <div class="finder"><img src="assets/icon-calculator.png" alt=""><span>Calculator.japp</span></div>
+        </div>
+        <span class="caption">Dock tile and the file's Finder icon</span>
+      </div>
+      <div class="effect" id="x-window">
+        <div class="winbox"><span class="w">400</span><span class="h">550</span></div>
+        <span class="caption" style="margin-top:14px">a native window, title bar hidden</span>
+      </div>
+      <div class="effect" id="x-perm">
+        <div class="perm"><span class="tag ok">japp.storage ✓</span><span class="tag deny">japp.http ✕</span></div>
+        <span class="caption">only declared APIs answer</span>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="figures.js"></script>
+<script>
+wire("#e-manifest", "#manifest", { color: "rt", atTo: .1, bend: 24 });
+wire("#m-name", "#x-name", { color: "app", fromEdge: "#manifest", atTo: .3, bend: 30 });
+wire("#m-icon", "#x-icon", { color: "app", fromEdge: "#manifest", atTo: .4, bend: 30 });
+wire("#m-window", "#x-window", { color: "web", fromEdge: "#manifest", atTo: .4, bend: 30 });
+wire("#m-perm", "#x-perm", { color: "ok", fromEdge: "#manifest", atTo: .3, bend: 30 });
+</script>
+</body>
+</html>

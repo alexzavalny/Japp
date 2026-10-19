@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="figures.css">
+<style>
+/* One example app on a desktop background; make.sh sets data-variant="app-<name>". */
+.fig { padding: 0; display: grid; place-items: center; }
+.window { display: none; }
+.window img { max-width: 560px; max-height: 372px; width: auto; }
+[data-variant="app-calculator"] #calculator, [data-variant="app-chess"] #chess,
+[data-variant="app-paint"] #paint, [data-variant="app-hello"] #hello { display: block; }
+</style>
+</head>
+<body>
+<div class="fig wallpaper">
+  <div class="window" id="calculator"><img src="shots/calculator.png" alt=""></div>
+  <div class="window" id="chess"><img src="shots/chess.png" alt=""></div>
+  <div class="window" id="paint"><img src="shots/paint.png" alt=""></div>
+  <div class="window" id="hello"><img src="shots/hello.png" alt=""></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="figures.css">
+<style>
+.fig { display: grid; grid-template-columns: 410px minmax(0, 1fr); gap: 20px; align-items: center; padding: 30px 44px; }
+.eyebrow { font: 600 11.5px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); display: flex; gap: 10px; align-items: center; }
+.eyebrow img { width: 30px; height: 30px; }
+h1 { font: 800 58px/.98 var(--display); letter-spacing: -.035em; margin: 20px 0 0; }
+h1 span { display: block; color: var(--muted); }
+.lead { margin-top: 18px; max-width: 24em; font-size: 16px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
+.stage { position: relative; height: 410px; }
+#file { position: absolute; left: -14px; top: 118px; width: 150px; }
+.inside { position: absolute; left: -8px; top: 268px; display: grid; gap: 5px; }
+.inside span { font: 500 11.5px/1 var(--mono); color: var(--ink-2); display: flex; gap: 7px; align-items: center; }
+.inside i { width: 4px; height: 12px; border-radius: 2px; display: inline-block; }
+#win { position: absolute; right: 6px; top: 4px; width: 258px; }
+.under { position: absolute; right: 6px; top: 374px; width: 258px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="fig">
+  <div>
+    <div class="eyebrow"><img src="assets/icon-runtime.png" alt="">JApp · macOS 14+ · WebKit · no build step</div>
+    <h1>One file in.<span>A Mac app out.</span></h1>
+    <p class="lead">A <code>.japp</code> is a ZIP of HTML, CSS and JavaScript. Double-click it and it runs as its own macOS app: its own window, name, icon and Dock tile.</p>
+    <div class="chips">
+      <span class="chip"><i style="background:var(--ok)"></i>no compiler</span>
+      <span class="chip"><i style="background:var(--ok)"></i>no bundler</span>
+      <span class="chip"><i style="background:var(--ok)"></i>no Chromium</span>
+    </div>
+  </div>
+  <div class="stage">
+    <div class="file" id="file">
+      <img src="assets/icon-calculator.png" alt="">
+      <span class="name">Calculator.japp</span>
+      <span class="meta">170 KB · 5 files</span>
+    </div>
+    <div class="inside">
+      <span><i style="background:var(--runtime)"></i>manifest.json</span>
+      <span><i style="background:#E8664A"></i>index.html</span>
+      <span><i style="background:var(--web)"></i>style.css</span>
+      <span><i style="background:#E9B949"></i>app.js</span>
+      <span><i style="background:var(--app)"></i>assets/icon.png</span>
+    </div>
+    <div class="window" id="win"><img src="shots/calculator.png" alt=""></div>
+    <p class="under caption">its own process, Dock icon and<br>name in the menu bar</p>
+  </div>
+</div>
+<script src="figures.js"></script>
+<script>
+wire("#file img", "#win", { color: "rt", dash: true, label: "double-click", labelDx: -8, labelDy: -16, bend: 40 });
+</script>
+</body>
+</html>

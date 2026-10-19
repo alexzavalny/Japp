@@ -1,0 +1,154 @@
+/* Shared look of the README figures: a drafting-table ground, cards, code panels.
+   Colour encodes the actor, as in Docs/ARCHITECTURE.md:
+   indigo = JApp Runtime, orange = the app, blue = WebKit / web content. */
+:root {
+  --bg: #ECEEF2;
+  --paper: #F7F8FA;
+  --surface: #FFFFFF;
+  --ink: #13161B;
+  --ink-2: #39404B;
+  --muted: #646D7B;
+  --line: #C8CED8;
+  --line-2: #DDE1E8;
+  --grid: rgba(19, 22, 27, .05);
+  --runtime: #5338D6;
+  --runtime-soft: rgba(83, 56, 214, .10);
+  --app: #DE7A00;
+  --app-soft: rgba(222, 122, 0, .12);
+  --web: #0A6FE0;
+  --web-soft: rgba(10, 111, 224, .10);
+  --ok: #1B9447;
+  --ok-soft: rgba(27, 148, 71, .12);
+  --deny: #D3342B;
+  --deny-soft: rgba(211, 52, 43, .11);
+  --code-bg: #171A21;
+  --code-ink: #E3E7EE;
+  --code-muted: #7D8696;
+  --code-key: #8DB9FF;
+  --code-str: #FFB35C;
+  --code-add: rgba(60, 203, 107, .16);
+  --code-del: rgba(255, 93, 82, .16);
+  --shadow: 0 1px 0 rgba(19, 22, 27, .04), 0 14px 34px -14px rgba(19, 22, 27, .28);
+  --window-shadow: 0 0 0 .5px rgba(0, 0, 0, .28), 0 22px 48px -12px rgba(0, 0, 0, .42);
+  --sans: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+  --display: -apple-system, "SF Pro Display", "Helvetica Neue", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #0D1016;
+  --paper: #12161D;
+  --surface: #181D26;
+  --ink: #E8EBF0;
+  --ink-2: #C2C8D2;
+  --muted: #8B94A3;
+  --line: #2E3541;
+  --line-2: #232934;
+  --grid: rgba(232, 235, 240, .045);
+  --runtime: #9584FF;
+  --runtime-soft: rgba(149, 132, 255, .15);
+  --app: #FFA22E;
+  --app-soft: rgba(255, 162, 46, .14);
+  --web: #4FA5FF;
+  --web-soft: rgba(79, 165, 255, .13);
+  --ok: #3CCB6B;
+  --ok-soft: rgba(60, 203, 107, .14);
+  --deny: #FF5D52;
+  --deny-soft: rgba(255, 93, 82, .14);
+  --code-bg: #0A0D12;
+  --shadow: 0 1px 0 rgba(0, 0, 0, .3), 0 16px 36px -14px rgba(0, 0, 0, .75);
+  --window-shadow: 0 0 0 .5px rgba(255, 255, 255, .16), 0 22px 48px -12px rgba(0, 0, 0, .8);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; }
+body {
+  background: var(--bg);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: -1px -1px;
+  color: var(--ink);
+  font: 400 15px/1.5 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+.fig { position: absolute; inset: 0; padding: 34px 40px; }
+p { margin: 0; }
+img { display: block; }
+
+/* Type */
+.kicker { font: 600 11.5px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--runtime); }
+.title { font: 800 34px/1.05 var(--display); letter-spacing: -.02em; margin: 10px 0 0; }
+.title .dim { color: var(--muted); }
+.lead { color: var(--ink-2); font-size: 15.5px; line-height: 1.5; }
+.mono { font-family: var(--mono); }
+.small { font-size: 12.5px; }
+.muted { color: var(--muted); }
+.caption { font: 400 12px/1.45 var(--mono); color: var(--muted); }
+code { font: 500 .9em var(--mono); background: var(--line-2); padding: .05em .35em; border-radius: 4px; }
+.c-rt { color: var(--runtime); } .c-app { color: var(--app); } .c-web { color: var(--web); }
+.c-ok { color: var(--ok); } .c-deny { color: var(--deny); }
+
+/* Cards, chips, steps */
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); position: relative; }
+.card.surface { background: var(--surface); }
+.card.rt { background: linear-gradient(var(--runtime-soft), var(--runtime-soft)), var(--paper); border-color: color-mix(in srgb, var(--runtime) 45%, var(--line)); }
+.card.app { background: linear-gradient(var(--app-soft), var(--app-soft)), var(--paper); border-color: color-mix(in srgb, var(--app) 45%, var(--line)); }
+.card.web { background: linear-gradient(var(--web-soft), var(--web-soft)), var(--paper); border-color: color-mix(in srgb, var(--web) 45%, var(--line)); }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; font: 600 12px/1 var(--mono); padding: 6px 10px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); white-space: nowrap;
+}
+.chip i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.step { display: inline-flex; align-items: center; gap: 8px; font: 700 11.5px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+.step .n { width: 22px; height: 22px; border-radius: 50%; background: var(--ink); color: var(--bg); display: inline-grid; place-items: center; font-size: 12px; letter-spacing: 0; }
+.tag { font: 600 10.5px/1 var(--mono); padding: 4px 7px; border-radius: 6px; background: var(--line-2); color: var(--ink-2); white-space: nowrap; }
+.tag.rt { background: var(--runtime-soft); color: var(--runtime); }
+.tag.app { background: var(--app-soft); color: var(--app); }
+.tag.web { background: var(--web-soft); color: var(--web); }
+.tag.ok { background: var(--ok-soft); color: var(--ok); }
+.tag.deny { background: var(--deny-soft); color: var(--deny); }
+
+/* A macOS window made from a screenshot */
+.window { border-radius: 11px; box-shadow: var(--window-shadow); overflow: hidden; background: #1c1c1e; }
+.window img { width: 100%; height: auto; }
+
+/* Finder-style file icon with its name */
+.file { display: grid; justify-items: center; gap: 6px; }
+.file img { width: 96px; height: 96px; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .22)); }
+.file .name { font: 600 13px/1.2 var(--sans); padding: 3px 8px; border-radius: 5px; background: #2F6FEB; color: #fff; }
+.file .meta { font: 400 11.5px/1.2 var(--mono); color: var(--muted); }
+
+/* Code */
+pre.code {
+  margin: 0; background: var(--code-bg); color: var(--code-ink); font: 400 12.5px/1.65 var(--mono);
+  padding: 14px 16px; border-radius: 11px; white-space: pre; overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, .04), var(--shadow);
+}
+pre.code .c { color: var(--code-muted); } pre.code .k { color: var(--code-key); } pre.code .s { color: var(--code-str); }
+pre.code .p { color: #7EE2A8; } pre.code .ln { color: #4B5361; display: inline-block; width: 2.2em; }
+pre.code .add, pre.code .del { display: block; margin: 0 -16px; padding: 0 16px; }
+pre.code .add { background: var(--code-add); } pre.code .del { background: var(--code-del); }
+pre.code .add::before, pre.code .del::before { display: inline-block; width: 0; margin-left: -12px; margin-right: 12px; }
+pre.code .add::before { content: "+"; color: #3CCB6B; } pre.code .del::before { content: "−"; color: #FF5D52; }
+.code-title { display: flex; gap: 6px; align-items: center; padding: 0 2px 8px; font: 500 11.5px/1 var(--mono); color: var(--muted); }
+.code-title .dots { display: inline-flex; gap: 5px; margin-right: 6px; }
+.code-title .dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); display: inline-block; }
+
+/* Connectors drawn by figures.js */
+svg.wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+svg.wires path { fill: none; stroke-width: 2; stroke-linecap: round; }
+svg.wires path.dash { stroke-dasharray: 5 6; }
+svg.wires text { font: 600 11px var(--mono); }
+
+/* macOS desktop pieces (menu bar, Dock) */
+.wallpaper { background: radial-gradient(120% 90% at 15% 10%, #4B5D86 0%, transparent 60%), radial-gradient(90% 80% at 90% 100%, #C0806A 0%, transparent 60%), linear-gradient(160deg, #34446A, #6D5A8C 55%, #A97268); }
+.menubar { height: 28px; display: flex; align-items: center; gap: 18px; padding: 0 16px; background: rgba(240, 242, 247, .55); color: #111; font: 500 13px/1 var(--sans); backdrop-filter: blur(20px); }
+.menubar b { font-weight: 700; }
+.menubar .apple { width: 14px; height: 16px; }
+.menubar .right { margin-left: auto; font-variant-numeric: tabular-nums; }
+.dock { display: flex; gap: 12px; padding: 8px 12px 6px; background: rgba(255, 255, 255, .26); border: 1px solid rgba(255, 255, 255, .35); border-radius: 20px; backdrop-filter: blur(16px); width: max-content; }
+.dock figure { margin: 0; display: grid; justify-items: center; gap: 4px; position: relative; }
+.dock img { width: 54px; height: 54px; }
+.dock .run { width: 4px; height: 4px; border-radius: 50%; background: rgba(255, 255, 255, .9); }
+.dock .label { position: absolute; top: -30px; font: 500 11.5px/1 var(--sans); color: #fff; background: rgba(30, 30, 36, .7); padding: 5px 8px; border-radius: 6px; white-space: nowrap; }

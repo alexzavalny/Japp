@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="figures.css">
+<style>
+.head { display: grid; grid-template-columns: 1fr 330px; gap: 30px; align-items: end; }
+.grid { position: absolute; left: 40px; right: 40px; top: 126px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.threat { padding: 13px 15px 14px; display: grid; gap: 7px; align-content: start; background: var(--surface); }
+.threat .try { display: flex; gap: 9px; align-items: center; font: 600 12.5px/1.2 var(--mono); }
+.threat .try i { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--deny); color: #fff; display: grid; place-items: center; font: 700 12px/1 var(--sans); font-style: normal; }
+.threat p { font-size: 12.5px; line-height: 1.4; color: var(--ink-2); }
+.threat .stop { font: 500 11.5px/1.4 var(--mono); color: var(--ok); border-top: 1px dashed var(--line); padding-top: 7px; }
+.foot { position: absolute; left: 40px; right: 40px; bottom: 22px; }
+</style>
+</head>
+<body>
+<div class="fig">
+  <div class="head">
+    <div>
+      <div class="kicker">Safe by default</div>
+      <h2 class="title">A .japp is untrusted input.</h2>
+    </div>
+    <p class="lead small">Checked before a byte is inflated, isolated while it runs, and confirmed with you when it came from the internet.</p>
+  </div>
+
+  <div class="grid">
+    <div class="card threat"><span class="try"><i>✕</i>../../evil.txt</span><p>An entry that climbs out of its folder when unpacked (“ZIP Slip”).</p><span class="stop">rejected; nothing is extracted</span></div>
+    <div class="card threat"><span class="try"><i>✕</i>1 KB → 4 GB</span><p>A zip bomb that lies about its size.</p><span class="stop">inflation stops at the declared size; archive, file and entry limits</span></div>
+    <div class="card threat"><span class="try"><i>✕</i>link → /etc/passwd</span><p>Symbolic links, absolute paths, duplicate or overlapping entries.</p><span class="stop">the archive is refused</span></div>
+    <div class="card threat"><span class="try"><i>✕</i>fetch("https://…")</span><p>Talking to the network without declaring <code>network</code>.</p><span class="stop">blocked by Content-Security-Policy; japp.http refuses</span></div>
+    <div class="card threat"><span class="try"><i>✕</i>another app's data</span><p>Reading the storage, localStorage or cookies of another app.</p><span class="stop">own origin, WebKit data store and storage folder per app</span></div>
+    <div class="card threat"><span class="try"><i>✕</i>a downloaded .japp</span><p>Running an app from the internet without noticing.</p><span class="stop">macOS quarantine flag → asks once before the first run</span></div>
+  </div>
+  <p class="foot caption">No shell, process API or file paths: apps reach the Mac only through the bridge. Details: Docs/SECURITY.md</p>
+</div>
+</body>
+</html>

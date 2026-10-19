@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="figures.css">
+<style>
+.head { display: grid; grid-template-columns: 1fr 360px; gap: 30px; align-items: end; }
+.body { position: absolute; left: 40px; right: 40px; top: 124px; display: grid; grid-template-columns: 250px 290px 1fr; gap: 58px; align-items: center; }
+.bundles { display: grid; gap: 12px; }
+.bundle { display: grid; grid-template-columns: 40px 1fr; gap: 2px 12px; align-items: center; padding: 10px 12px; }
+.bundle img { width: 40px; height: 40px; grid-row: span 2; }
+.bundle b { font: 600 13px/1.2 var(--sans); }
+.bundle small { font: 400 10.5px/1.3 var(--mono); color: var(--muted); }
+.label { font: 600 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px; }
+.core { padding: 14px 16px; }
+.core .top { display: flex; gap: 10px; align-items: center; }
+.core .top img { width: 42px; height: 42px; }
+.core .top b { font: 700 15px/1.2 var(--sans); }
+.core .lib { margin-top: 12px; border-radius: 9px; background: var(--runtime); color: #fff; padding: 9px 12px; font: 600 12px/1.3 var(--mono); }
+.core .lib small { display: block; font-weight: 400; opacity: .8; }
+.core ul { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; font: 400 12.5px/1.3 var(--sans); color: var(--ink-2); }
+.core li::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--runtime); margin-right: 8px; vertical-align: 1px; }
+.right { display: grid; gap: 14px; }
+.right .card { padding: 11px 14px; }
+.right b { display: block; font: 600 13px/1.25 var(--sans); }
+.right small { display: block; font: 400 11px/1.4 var(--mono); color: var(--muted); margin-top: 3px; }
+.spec { position: absolute; left: 40px; right: 40px; bottom: 26px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--ink); }
+.spec > div { padding: 10px 14px 0 0; }
+.spec > div + div { padding-left: 14px; border-left: 1px solid var(--line-2); }
+.spec .v { font: 800 24px/1.1 var(--display); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.spec .k { font: 400 11px/1.35 var(--mono); color: var(--muted); margin-top: 3px; }
+</style>
+</head>
+<body>
+<div class="fig">
+  <div class="head">
+    <div>
+      <div class="kicker">How it runs</div>
+      <h2 class="title">Own process. <span class="dim">Shared runtime.</span></h2>
+    </div>
+    <p class="lead small">Each app gets a tiny signed bundle of its own, so macOS shows its name and icon everywhere. The code stays in one place.</p>
+  </div>
+
+  <div class="body">
+    <div>
+      <div class="label c-app">App bundles, made on first open</div>
+      <div class="bundles">
+        <div class="card app bundle" id="b1"><img src="assets/icon-calculator.png" alt=""><b>Calculator.app</b><small>53 KB launcher + icon</small></div>
+        <div class="card app bundle" id="b2"><img src="assets/icon-chessresults.png" alt=""><b>Chess Results.app</b><small>own name, icon, bundle id</small></div>
+        <div class="card app bundle" id="b3"><img src="assets/icon-paint.png" alt=""><b>Paint.app</b><small>rebuilt when it changes</small></div>
+      </div>
+    </div>
+
+    <div class="card rt core" id="core">
+      <div class="top"><img src="assets/icon-runtime.png" alt=""><b>JApp Runtime.app</b></div>
+      <div class="lib">libJAppRuntimeCore.dylib<small>one copy, dlopen’ed by every app</small></div>
+      <ul>
+        <li>NSWindow from the manifest</li>
+        <li>WKWebView, data store per app</li>
+        <li>window.japp bridge</li>
+        <li>ZIP reader, files served in memory</li>
+      </ul>
+    </div>
+
+    <div class="right">
+      <div class="card web" id="web"><b>WebKit (the system's)</b><small>japp-resource://&lt;id&gt;/index.html<br>served from the ZIP in memory</small></div>
+      <div class="card" id="data"><b>Your data, outside the archive</b><small>~/Library/Application Support/<br>JApp/Apps/&lt;id&gt;/storage.json</small></div>
+      <div class="card" id="file"><b>The .japp you opened</b><small>read once, never extracted;<br>Edit Source saves back into it</small></div>
+    </div>
+  </div>
+
+  <div class="spec">
+    <div><div class="v">53 KB</div><div class="k">launcher in each app bundle</div></div>
+    <div><div class="v">1.5 MB</div><div class="k">shared runtime library</div></div>
+    <div><div class="v">≈ 0.5 s</div><div class="k">double-click → app running</div></div>
+    <div><div class="v">0 bytes</div><div class="k">extracted to run an app</div></div>
+  </div>
+</div>
+<script src="figures.js"></script>
+<script>
+wire("#b1", "#core", { color: "app", atTo: .3, bend: 30 });
+wire("#b2", "#core", { color: "app", atTo: .5, bend: 30 });
+wire("#b3", "#core", { color: "app", atTo: .7, bend: 30 });
+wire("#core", "#web", { color: "web", at: .3, bend: 30 });
+wire("#core", "#data", { color: "rt", at: .5, bend: 30 });
+wire("#file", "#core", { color: "muted", side: "left", toSide: "right", at: .5, atTo: .7, bend: 30, dash: true });
+</script>
+</body>
+</html>
